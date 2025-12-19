@@ -115,25 +115,82 @@ Distributed computing project/
 │   ├── kernels/
 │   │   ├── linear_algebra/
 │   │   │   ├── solve_linear.f90
+│   │   │   ├── dense_matrix.f90
+│   │   │   ├── sparse_matrix.f90
 │   │   │   └── eigen.f90
 │   │   │
-│   │   ├── monte_carlo/
-│   │   │   ├── rng.f90
-│   │   │   └── sampling.f90
+│   │   ├── pde/
+│   │   │   ├── spectral.f90
+│   │   │   ├── finite_distance.f90
+│   │   │   └── finite_volume.f90
 │   │   │
-│   │   └── pde/
-│   │       ├── heat_equation.f90
-│   │       └── wave_equation.f90
+│   │   ├── ode/
+│   │   │   ├── dormand_prince.f90
+│   │   │   ├── rk4.f90
+│   │   │   └── backward euler
+│   │   │
+│   │   ├── optimisation/
+│   │   │   ├── gradient_descent.f90
+│   │   │   ├── conjugate_gradient.f90
+│   │   │   ├── quasi_newton.f90
+│   │   │   └── constrained.f90
+│   │   │
+│   │   ├── root_find/
+│   │   │   ├── newton_rhapson.f90
+│   │   │   └── secant.f90
+│   │   │
+│   │   ├── statistics/
+│   │   │   ├── monte_carlo.f90
+│   │   │   ├── markov_chain.f90
+│   │   │   ├── boostrap.f90
+│   │   │   ├── resampling.f90
+│   │   │   └── bayesian_inference.f90
+│   │   │
+│   │   └── convolution/
+│   │       ├── multidim_fft.f90
+│   │       ├── real_to_complex.f90
+│   │       ├── complex_to_complex.f90
+│   │       ├── convolution.f90
+│   │       └── correlation.f90
 │   │
 │   ├── models/
+│   │   ├── ode/
+│   │   │   ├── harmonic_oscilator.f90
+│   │   │   ├── pendulum.f90
+│   │   │   ├── coupled_oscilators.f90
+│   │   │   ├── lorenz.f90
+│   │   │   ├── van_der_pol_oscillator.f90
+│   │   │   └── lotka_volterra.f90
+│   │   │
 │   │   ├── classical_mechanics/
-│   │   │   └── n_body.f90
+│   │   │   ├── nbody_gravitation.f90
+│   │   │   └── rigidbody_dynamics.f90
 │   │   │
-│   │   ├── quantum/
-│   │   │   └── schrodinger.f90
+│   │   ├── field_continuum/
+│   │   │   ├── diffusion_heat_equation.f90
+│   │   │   ├── wave_equation.f90
+│   │   │   └── advection_diffusion.f90
 │   │   │
-│   │   └── maths/
-│   │       └── optimisation.f90
+│   │   ├── fluid_dynamics/
+│   │   │   ├── incompressibles.f90
+│   │   │   └── lattice_boltzmann.f90
+│   │   │
+│   │   ├── electromagnetism_waves/
+│   │   │   ├── maxwell.f90
+│   │   │   ├── poisson.f90
+│   │   │   └── laplace.f90
+│   │   │
+│   │   ├── statistical_stochastic/
+│   │   │   ├── ising.f90
+│   │   │   └── random_walk.f90
+│   │   │
+│   │   ├── biology_ecology/
+│   │   │   ├── population_dynamics.f90
+│   │   │   └── neural_networking.f90
+│   │   │
+│   │   └── materials
+│   │       ├── allen_cahn.f90
+│   │       └── cahn_hilliard.f90
 │   │
 │   ├── io/
 │   │   ├── write_results.f90
