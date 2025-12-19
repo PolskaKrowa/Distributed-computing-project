@@ -554,16 +554,16 @@ Define a canonical C task structure in `include/task.h` which all coordinators a
 #include <stddef.h>
 
 typedef struct {
-uint64_t task_id;        // unique across run
-uint32_t model_id;       // model selector known to runtime
-const void *input;       // pointer to input buffer owned by C
-size_t input_size;       // bytes
-void *output;            // pointer to output buffer owned by C
-size_t output_size;      // bytes available in output
-uint64_t trace_id;       // correlation id for logs/traces
-uint32_t api_version;    // version number of call contract
-uint32_t flags;          // bitflags for optional behaviour
-int32_t timeout_secs;    // <= 0 means no timeout
+    uint64_t task_id;        // unique across run
+    uint32_t model_id;       // model selector known to runtime
+    const void *input;       // pointer to input buffer owned by C
+    size_t input_size;       // bytes
+    void *output;            // pointer to output buffer owned by C
+    size_t output_size;      // bytes available in output
+    uint64_t trace_id;       // correlation id for logs/traces
+    uint32_t api_version;    // version number of call contract
+    uint32_t flags;          // bitflags for optional behaviour
+    int32_t timeout_secs;    // <= 0 means no timeout
 } task_t;
 ```
 
@@ -588,11 +588,11 @@ All Fortran entrypoints must follow this canonical C-callable signature. This ma
 
 // returns int32 status; 0 == OK
 int32_t fortran_model_run_v1(
-const void *input_buf, size_t input_size,
-void *output_buf, size_t output_size,
-const void *meta_buf, size_t meta_size,
-uint64_t trace_id,
-int32_t *out_status_code /* optional extra code */
+    const void *input_buf, size_t input_size,
+    void *output_buf, size_t output_size,
+    const void *meta_buf, size_t meta_size,
+    uint64_t trace_id,
+    int32_t *out_status_code /* optional extra code */
 );
 ```
 
@@ -608,16 +608,16 @@ Notes:
 ```fortran
 ! fortran/interface/c_api.f90
 module c_api
-use iso_c_binding
-implicit none
+    use iso_c_binding
+    implicit none
 contains
-subroutine fortran_model_run_v1(input, input_bytes, output, output_bytes, meta, meta_bytes, trace_id, out_status) bind(C, name="fortran_model_run_v1")
-type(c_ptr), value :: input, output, meta
-integer(c_size_t), value :: input_bytes, output_bytes, meta_bytes
-integer(c_int64_t), value :: trace_id
-integer(c_int32_t), intent(out) :: out_status
-! Implementation must map c_ptr to Fortran arrays using c_f_pointer
-end subroutine fortran_model_run_v1
+    subroutine fortran_model_run_v1(input, input_bytes, output, output_bytes, meta, meta_bytes, trace_id, out_status) bind(C, name="fortran_model_run_v1")
+        type(c_ptr), value :: input, output, meta
+        integer(c_size_t), value :: input_bytes, output_bytes, meta_bytes
+        integer(c_int64_t), value :: trace_id
+        integer(c_int32_t), intent(out) :: out_status
+        ! Implementation must map c_ptr to Fortran arrays using c_f_pointer
+    end subroutine fortran_model_run_v1
 end module c_api
 ```
 
@@ -639,11 +639,11 @@ All distributed messages should use a single small envelope header. This ensures
 
 ```c
 struct message_header {
-uint32_t magic;      // e.g. 0xDA7A1E00
-uint16_t version;    // envelope version
-uint16_t msg_type;   // e.g. TASK_SUBMIT, TASK_RESULT
-uint64_t task_id;
-uint32_t payload_len; // payload only, excluding header
+    uint32_t magic;      // e.g. 0xDA7A1E00
+    uint16_t version;    // envelope version
+    uint16_t msg_type;   // e.g. TASK_SUBMIT, TASK_RESULT
+    uint64_t task_id;
+    uint32_t payload_len; // payload only, excluding header
 };
 ```
 
@@ -666,18 +666,18 @@ Payloads are opaque blobs; their interpretation depends on `msg_type`.
 #include "include/fortran_api.h"
 
 int execute_task(task_t *task) {
-// validate sizes
-if (!task->input || task->input_size == 0) return ERR_INVALID_ARGUMENT;
+    // validate sizes
+    if (!task->input || task->input_size == 0) return ERR_INVALID_ARGUMENT;
 
-// serialise access if Fortran not thread safe
-mutex_lock(&fortran_call_lock);
+    // serialise access if Fortran not thread safe
+    mutex_lock(&fortran_call_lock);
 
-int32_t rc = fortran_model_run_v1(task->input, task->input_size,
-                                task->output, task->output_size,
-                                NULL, 0,
-                                task->trace_id,
-                                NULL);
-mutex_unlock(&fortran_call_lock);
+    int32_t rc = fortran_model_run_v1(task->input, task->input_size,
+                                    task->output, task->output_size,
+                                    NULL, 0,
+                                    task->trace_id,
+                                    NULL);
+    mutex_unlock(&fortran_call_lock);
 
 return rc;
 }
