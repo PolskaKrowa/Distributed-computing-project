@@ -741,4 +741,4 @@ Multiple records are concatenated. Parsers must skip unknown types gracefully.
 
 ---
 
-Thank you. Implementers: follow these contracts exactly to ensure independent implementations interoperate. If you need an additional concrete example for a specific model or transport, add a short request in the issue tracker and tag `interface-contracts`.
+Follow these contracts exactly to ensure independent implementations interoperate. If you need an additional concrete example for a specific model or transport, add a short request in the issue tracker and tag `interface-contracts`.
