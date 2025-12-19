@@ -30,7 +30,6 @@ endif()
 # Dependencies
 # ----------------------------
 
-find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 
 option(ENABLE_MPI "Enable MPI support" ON)
@@ -62,7 +61,6 @@ add_library(science_fortran STATIC
 
 target_link_libraries(science_fortran
     PRIVATE
-        BLAS::BLAS
         LAPACK::LAPACK
 )
 
