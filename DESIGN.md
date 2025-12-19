@@ -85,7 +85,7 @@ Distributed computing project/
 │   ├── net/
 │   │   ├── transport_mpi.c
 │   │   ├── transport_zmq.c
-│   │   ├── transport.h
+│   │   └── transport.h
 │   │
 │   ├── storage/
 │   │   ├── metadata.c
@@ -153,7 +153,7 @@ Distributed computing project/
 │   │   └── test_queue.c
 │   │
 │   └── integration/
-│       ├── test_distributed_run.c
+│       └── test_distributed_run.c
 │
 ├── examples/
 │   ├── minimal_cluster/
