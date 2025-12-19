@@ -161,3 +161,8 @@ int transport_shutdown(transport_t *t) {
     free(t);
     return 0;
 }
+
+const char *transport_conn_peer(const transport_conn_t *c)
+{
+    return c ? c->peer : NULL;
+}

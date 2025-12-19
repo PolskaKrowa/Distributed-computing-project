@@ -23,7 +23,10 @@ int run_coordinator(uint16_t port) {
         transport_shutdown(t);
         return 1;
     }
-    printf("Accepted connection from %s\n", c->peer);
+    printf(
+        "Accepted connection from %s\n",
+        transport_conn_peer(c) ? transport_conn_peer(c) : "(unknown)"
+    );
 
     // Expect REGISTER
     uint32_t type; void *payload; uint32_t len;

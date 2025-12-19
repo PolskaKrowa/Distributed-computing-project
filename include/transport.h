@@ -17,6 +17,8 @@ int transport_connect(const char *host, uint16_t port, transport_conn_t **out);
 int transport_send_message(transport_conn_t *c, uint32_t type, const void *payload, uint32_t payload_len);
 int transport_recv_message(transport_conn_t *c, uint32_t *out_type, void **out_payload, uint32_t *out_payload_len);
 
+const char *transport_conn_peer(const transport_conn_t *c);
+
 // Close
 int transport_close_conn(transport_conn_t *c);
 int transport_shutdown(transport_t *t);
