@@ -74,16 +74,24 @@ add_library(runtime_c STATIC
     src/common/log.c
 )
 
-target_include_directories(runtime_c
-    PUBLIC ${PROJECT_SOURCE_DIR}/include
+# Networking transport library
+add_library(net_transport STATIC
+    src/net/transport_tcp.c
 )
+
+# Common include directories
+foreach(lib runtime_c net_transport)
+    target_include_directories(${lib}
+        PUBLIC ${PROJECT_SOURCE_DIR}/include
+    )
+endforeach()
 
 # ----------------------------
 # Example executable
 # ----------------------------
 
 add_executable(run_pi
-    src/tools/run_pi.c
+    tools/experimental/run_pi.c
 )
 
 target_link_libraries(run_pi
@@ -95,3 +103,22 @@ target_link_libraries(run_pi
 if (ENABLE_MPI)
     target_link_libraries(run_pi PRIVATE MPI::MPI_C)
 endif()
+
+# ----------------------------
+# Network transport test tool
+# ----------------------------
+
+add_executable(net_test
+    tools/diagnostics/net_test.c
+)
+
+target_link_libraries(net_test
+    PRIVATE
+        net_transport
+        runtime_c
+)
+
+# Place test tools under bin/
+set_target_properties(net_test PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin
+)
