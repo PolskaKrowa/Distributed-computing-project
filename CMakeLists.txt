@@ -52,6 +52,7 @@ include_directories(
 add_library(science_fortran STATIC
     fortran/core/kinds.f90
     fortran/core/constants.f90
+    fortran/core/rng.f90
 
     fortran/kernels/monte_carlo/estimate_pi.f90
     fortran/models/pi_experiment.f90
