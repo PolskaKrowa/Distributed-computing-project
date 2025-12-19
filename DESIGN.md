@@ -63,6 +63,7 @@ Distributed computing project/
 │
 ├── include/
 │   ├── project.h
+│   ├── errcodes.h
 │   ├── task.h
 │   ├── result.h
 │   └── fortran_api.h
@@ -471,3 +472,273 @@ int main(void)
     return 0;
 }
 ```
+
+
+# API and Function Contracts
+
+This segment extends the above documentation by standardising function signatures, data contracts, and interaction patterns between components and languages. It is written so that each developer can implement their piece without seeing other developers' code while still producing compatible behaviour.
+
+> Refer to the base design for project scope and language separation. This supplementary document contains concrete contracts and examples for implementers.
+
+---
+
+## 1. Goals of these contracts
+
+1. Make cross-module integration deterministic and low friction.
+2. Minimise accidental undefined behaviour at the language boundary.
+3. Keep interfaces stable and versioned so independent copies remain compatible.
+4. Provide explicit ownership, threading and error semantics.
+
+---
+
+## 2. Versioning and symbol stability
+
+1. All cross-language entry points must include a semantic version in their exported symbol name, for example `model_run_v1`.
+2. Minor ABI-compatible changes may increment a minor suffix: `model_run_v1_1`.
+3. Never rename an exported symbol; provide a new symbol instead and keep old symbols for backwards compatibility.
+
+---
+
+## 3. Memory ownership and buffer rules
+
+1. C always owns heap memory. Fortran may read/write buffers provided by C but must not free them. If Fortran must allocate, it must return a plain pointer and document the ownership semantics explicitly.
+2. All buffers passed across the boundary must be simple contiguous arrays. Use explicit lengths and element sizes.
+3. No Fortran derived types cross the boundary. No C pointers are embedded in Fortran-only data structures that C will access.
+4. Alignment and packing must be standard C ABI. Avoid platform-specific assumptions.
+
+---
+
+## 4. Threading and reentrancy rules
+
+1. Fortran entrypoints are not assumed to be thread safe unless explicitly documented as thread safe in the interface version notes.
+2. The C runtime must serialise concurrent calls into a single Fortran library unless the Fortran module explicitly documents thread safety.
+3. If parallel execution of the same Fortran library is required, prefer process isolation (separate worker processes) rather than concurrent in-process calls.
+4. C modules may be multi-threaded. Any C function that calls a Fortran entrypoint must follow the serialisation policy.
+
+---
+
+## 5. Error handling contract
+
+1. Every cross-language call returns an integer status code. Zero means success. Positive values are recognised error codes. Negative values are reserved for fatal or internal errors.
+2. Error codes are defined in `include/errcodes.h` and must be documented. Example codes:
+
+```text
+0  -> OK
+1  -> ERR_INVALID_ARGUMENT
+2  -> ERR_BUFFER_TOO_SMALL
+3  -> ERR_COMPUTATION_FAILED
+4  -> ERR_TIMEOUT
+5  -> ERR_NOT_IMPLEMENTED
+```
+
+3. Fortran routines must not `stop` or `exit` the process. They must return a status code and optionally write a textual diagnostic into a caller-provided `diag` buffer.
+4. The C runtime will convert status codes into actions: retry, checkpoint, abort, or mark task failed according to scheduler policy.
+
+---
+
+## 6. Logging and tracing
+
+1. The C runtime provides a 64 bit `trace_id` in task metadata. This value must be forwarded by C when calling Fortran so logs produced on both sides can be correlated.
+2. Fortran may call a simple logging stub function provided by C for structured logs. The stub is optional. If used, it must be provided as a function pointer in the task descriptor.
+3. Log levels and format are controlled by the runtime. Fortran should not attempt to open or manage log files.
+
+---
+
+## 7. Task structure and lifecycle
+
+Define a canonical C task structure in `include/task.h` which all coordinators and workers must use.
+
+```c
+// include/task.h
+#include <stdint.h>
+#include <stddef.h>
+
+typedef struct {
+uint64_t task_id;        // unique across run
+uint32_t model_id;       // model selector known to runtime
+const void *input;       // pointer to input buffer owned by C
+size_t input_size;       // bytes
+void *output;            // pointer to output buffer owned by C
+size_t output_size;      // bytes available in output
+uint64_t trace_id;       // correlation id for logs/traces
+uint32_t api_version;    // version number of call contract
+uint32_t flags;          // bitflags for optional behaviour
+int32_t timeout_secs;    // <= 0 means no timeout
+} task_t;
+```
+
+Lifecycle:
+
+1. Coordinator creates and fills `task_t`.
+2. Worker runtime validates buffers and `api_version`.
+3. Worker calls Fortran entrypoint passing pointers and sizes.
+4. Fortran fills output buffer and returns status.
+5. Worker interprets status and acts accordingly.
+
+---
+
+## 8. Canonical C -> Fortran call signature
+
+All Fortran entrypoints must follow this canonical C-callable signature. This makes it simple to generate headers and stubs for each task.
+
+```c
+// include/fortran_api.h
+#include <stdint.h>
+#include <stddef.h>
+
+// returns int32 status; 0 == OK
+int32_t fortran_model_run_v1(
+const void *input_buf, size_t input_size,
+void *output_buf, size_t output_size,
+const void *meta_buf, size_t meta_size,
+uint64_t trace_id,
+int32_t *out_status_code /* optional extra code */
+);
+```
+
+Notes:
+
+* `input_buf` and `output_buf` point to contiguous memory. The element type is part of the model contract. Typically this is `double` for numerical data.
+* `meta_buf` is optional opaque metadata; if unused, pass NULL/0.
+* `out_status_code` may be NULL.
+* The exported Fortran symbol must be `fortran_model_run_v1` using `bind(C,name="fortran_model_run_v1")`.
+
+### Example Fortran binding (recommended pattern)
+
+```fortran
+! fortran/interface/c_api.f90
+module c_api
+use iso_c_binding
+implicit none
+contains
+subroutine fortran_model_run_v1(input, input_bytes, output, output_bytes, meta, meta_bytes, trace_id, out_status) bind(C, name="fortran_model_run_v1")
+type(c_ptr), value :: input, output, meta
+integer(c_size_t), value :: input_bytes, output_bytes, meta_bytes
+integer(c_int64_t), value :: trace_id
+integer(c_int32_t), intent(out) :: out_status
+! Implementation must map c_ptr to Fortran arrays using c_f_pointer
+end subroutine fortran_model_run_v1
+end module c_api
+```
+
+Implementation must call `c_f_pointer` to map the buffers to Fortran arrays and must not allocate output buffers. If more structured parameters are needed, pack them into `meta_buf`.
+
+---
+
+## 9. Metadata and schema
+
+1. `meta_buf` uses a tiny self-describing binary format. The recommended format is a sequence of TLV records (type:uint16, length:uint32, value:bytes).
+2. Reserve type codes for common fields: model hyperparameters, random seed, numeric kinds, and array shape descriptors.
+3. Keep the TLV parser simple and defensive.
+
+---
+
+## 10. Message envelope for transport
+
+All distributed messages should use a single small envelope header. This ensures transports are interchangeable.
+
+```c
+struct message_header {
+uint32_t magic;      // e.g. 0xDA7A1E00
+uint16_t version;    // envelope version
+uint16_t msg_type;   // e.g. TASK_SUBMIT, TASK_RESULT
+uint64_t task_id;
+uint32_t payload_len; // payload only, excluding header
+};
+```
+
+Payloads are opaque blobs; their interpretation depends on `msg_type`.
+
+---
+
+## 11. Checkpointing contract
+
+1. Checkpoints are byte blobs produced by C-only code. Fortran does not write checkpoints directly.
+2. If a Fortran model needs to produce checkpointable state, it must export a `serialize_state` entrypoint which writes into a buffer provided by C. The canonical signature follows the same pattern as `fortran_model_run_v1`.
+3. Checkpoint format must be versioned and documented.
+
+---
+
+## 12. Example minimal interaction (C worker pseudocode)
+
+```c
+// worker/executor.c
+#include "include/fortran_api.h"
+
+int execute_task(task_t *task) {
+// validate sizes
+if (!task->input || task->input_size == 0) return ERR_INVALID_ARGUMENT;
+
+// serialise access if Fortran not thread safe
+mutex_lock(&fortran_call_lock);
+
+int32_t rc = fortran_model_run_v1(task->input, task->input_size,
+                                task->output, task->output_size,
+                                NULL, 0,
+                                task->trace_id,
+                                NULL);
+mutex_unlock(&fortran_call_lock);
+
+return rc;
+}
+```
+
+---
+
+## 13. Unit testing and mocks
+
+1. Provide a C mock implementation of the Fortran API for unit tests. Place mocks under `tests/mocks/fortran_api_mock.c` and export the same symbol names. This lets C-only unit tests run without the Fortran library.
+2. Provide a Fortran mock that mirrors the C side behaviour so Fortran unit tests can run without C runtime.
+3. Integration tests must verify the canonical signatures and the TLV meta parsing.
+
+---
+
+## 14. Common pitfalls and checks for reviewers
+
+1. Ensure `bind(C)` names match the header exactly.
+2. Ensure `c_f_pointer` mappings respect `input_size` in bytes and element type.
+3. Do not allocate or free `output` buffers inside Fortran.
+4. Check API version field before assuming behaviour.
+5. Keep diagnostic strings within caller-provided buffer sizes.
+
+---
+
+## 15. Appendix A: Recommended small-type enums
+
+```c
+// include/result.h
+typedef enum {
+STATUS_OK = 0,
+STATUS_INVALID_ARGUMENT = 1,
+STATUS_BUFFER_OVERFLOW = 2,
+STATUS_COMPUTATION_ERROR = 3,
+STATUS_TIMEOUT = 4,
+STATUS_NOT_IMPLEMENTED = 5,
+} status_t;
+```
+
+---
+
+## 16. Appendix B: Minimal TLV example
+
+Binary layout example for one TLV record:
+
+```
+uint16_t type;      // e.g. 0x0001 for seed
+uint32_t length;    // length of value in bytes
+uint8_t  value[];   // raw bytes
+```
+
+Multiple records are concatenated. Parsers must skip unknown types gracefully.
+
+---
+
+## 17. Next steps for maintainers
+
+1. Add the canonical headers shown here into `include/` and commit them so each developer copies the same API.
+2. Export a small set of unit test mocks into `tests/mocks/` for local testing.
+3. Add a short `interface_contracts.md` into `docs/` summarising these rules for code reviewers.
+
+---
+
+Thank you. Implementers: follow these contracts exactly to ensure independent implementations interoperate. If you need an additional concrete example for a specific model or transport, add a short request in the issue tracker and tag `interface-contracts`.
