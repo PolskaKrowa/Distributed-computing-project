@@ -356,3 +356,58 @@ This project is designed to remain usable for decades.
 - Backwards compatibility is valued over novelty
 
 If in doubt, choose the simplest solution that can be understood by a physicist reading the code five years from now.
+
+---
+
+## 12. Common code
+
+Common source files are provided to ease development and reduce clutter.
+
+### log.h
+
+This is a provided logging library that has been written to ease debugging and
+allow for quick bug reporting.
+
+Using this library is as simple as pie:
+```c
+#include "common/log.h"
+
+int main(void)
+{
+    // initialise the logging function (USE ONLY ONCE IN EACH MAIN SCRIPT)
+    if (log_init("runtime.log", LOG_LEVEL_DEBUG) != 0) {
+        return 1;
+    }
+
+    log_info("runtime started");            // information (useful for stating any information that may be useful for the user)
+    log_debug("worker count = %d", 8);      // debugging data (same as info but with built-in string formatting to show data)
+    log_warn("slow network response");      // warning (only displayed if runtime is negatively affected but not strictly disasterous)
+    log_error("failed to open socket");     // error (only displayed if runtime is critically affected from a bug/hardware issue and certain features are unavailable)
+    log_fatal("unable to allocate memory"); // fatal error (only displayed if runtime is unable to continue running and must exit immediately)
+
+    log_shutdown(); // shut down ALL LOGS (This MUST be the last function called before program exit.)
+    return 0;
+}
+```
+
+### errors.h
+
+This is an automatic crash reporter library to allow for users to quickly report crashes that occur.
+
+Using this library is even easier than log.h:
+```c
+#include "common/errors.h"
+
+int main(void)
+{
+    // other initialisation functions, including log_init(...)
+
+    // Install reporter; optional report URL and log path
+    // Preferrably place this right after log_init to capture any crashes caused by log.h
+    error_reporter_install("https://your.crash.endpoint/upload", "runtime.log");
+
+    // rest of program...
+
+    return 0;
+}
+```
