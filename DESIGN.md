@@ -364,7 +364,9 @@ If in doubt, choose the simplest solution that can be understood by a physicist 
 
 Common source files are provided to ease development and reduce clutter.
 
-### log.h
+### Shared C files
+
+#### log.h
 
 This is a provided logging library that has been written to ease debugging and
 allow for quick bug reporting.
@@ -391,7 +393,7 @@ int main(void)
 }
 ```
 
-### errors.h
+#### errors.h
 
 This is an automatic crash reporter library to allow for users to quickly report crashes that occur.
 
