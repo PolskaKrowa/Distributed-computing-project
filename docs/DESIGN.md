@@ -520,7 +520,7 @@ This segment extends the above documentation by standardising function signature
 ## 5. Error handling contract
 
 1. Every cross-language call returns an integer status code. Zero means success. Positive values are recognised error codes. Negative values are reserved for fatal or internal errors.
-2. Error codes are defined in `include/errcodes.h` and must be documented. Example codes:
+2. Error codes are defined in `include/errcodes.h` and must be documented. Currently implemented codes:
 
 ```text
 0  -> OK
