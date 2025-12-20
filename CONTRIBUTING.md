@@ -174,7 +174,7 @@ Please explain:
 - What problem you are solving
 - Why your approach is correct
 - Any numerical or scientific assumptions made
-- Evidence of feature/fix testing
+- Evidence of fix/feature testing
 
 ---
 
