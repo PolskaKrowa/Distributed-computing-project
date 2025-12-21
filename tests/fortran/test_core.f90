@@ -178,7 +178,7 @@ contains
             print '(A)', "  ✗ Normal distribution parameters incorrect"
             failures = failures + 1
         else
-            print '(A,2F8.5)', "  ✓ Normal(0,1): mean=", mean_val, " std=", std_val
+            print '(A,F8.5,A,F8.5)', "  ✓ Normal(0,1): mean=", mean_val, " std=", std_val
         end if
         
         ! Test exponential distribution
