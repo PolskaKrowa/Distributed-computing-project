@@ -12,8 +12,13 @@
 #include <string.h>
 
 /* Forward declarations of implementation-specific init functions */
+#ifdef HAVE_MPI
 extern int transport_init_mpi(transport_t **out, const transport_config_t *config);
+#endif
+
+#ifdef HAVE_ZMQ
 extern int transport_init_zmq(transport_t **out, const transport_config_t *config);
+#endif
 
 /*
  * Dispatcher for transport initialization
@@ -27,9 +32,19 @@ int transport_init(transport_t **out, const transport_config_t *config)
 
     switch (config->type) {
         case TRANSPORT_TYPE_MPI:
+#ifdef HAVE_MPI
             return transport_init_mpi(out, config);
+#else
+            log_error("transport_init: MPI backend not available (compile with -DHAVE_MPI)");
+            return -3;
+#endif
         case TRANSPORT_TYPE_ZMQ:
+#ifdef HAVE_ZMQ
             return transport_init_zmq(out, config);
+#else
+            log_error("transport_init: ZMQ backend not available (compile with -DHAVE_ZMQ)");
+            return -4;
+#endif
         default:
             log_error("transport_init: unknown transport type %d", config->type);
             return -2;
