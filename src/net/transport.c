@@ -24,13 +24,6 @@ typedef struct {
     int (*get_rank)(const struct transport *t);
 } transport_vtable_t;
 
-/* Transport implementation structure */
-struct transport {
-    transport_type_t type;
-    transport_vtable_t *vtable;  /* Function pointers */
-    void *impl;                   /* Backend-specific data */
-};
-
 /* Forward declarations of implementation-specific init functions */
 #ifdef HAVE_MPI
 extern int transport_init_mpi(transport_t **out, const transport_config_t *config);
@@ -77,74 +70,90 @@ int transport_init(transport_t **out, const transport_config_t *config)
 
 int transport_shutdown(transport_t *t)
 {
-    if (!t || !t->vtable || !t->vtable->shutdown) {
+    if (!t || !t->vtable) {
         log_error("transport_shutdown: invalid transport");
         return -1;
     }
-    return t->vtable->shutdown(t);
+    transport_vtable_t *vtable = (transport_vtable_t *)t->vtable;
+    if (!vtable->shutdown) return -1;
+    return vtable->shutdown(t);
 }
 
 int transport_send(transport_t *t, const message_t *msg, int dst_rank)
 {
-    if (!t || !t->vtable || !t->vtable->send) {
+    if (!t || !t->vtable) {
         log_error("transport_send: invalid transport");
         return -1;
     }
-    return t->vtable->send(t, msg, dst_rank);
+    transport_vtable_t *vtable = (transport_vtable_t *)t->vtable;
+    if (!vtable->send) return -1;
+    return vtable->send(t, msg, dst_rank);
 }
 
 message_t *transport_recv(transport_t *t, int *src_rank)
 {
-    if (!t || !t->vtable || !t->vtable->recv) {
+    if (!t || !t->vtable) {
         log_error("transport_recv: invalid transport");
         return NULL;
     }
-    return t->vtable->recv(t, src_rank);
+    transport_vtable_t *vtable = (transport_vtable_t *)t->vtable;
+    if (!vtable->recv) return NULL;
+    return vtable->recv(t, src_rank);
 }
 
 int transport_poll(transport_t *t, int timeout_ms)
 {
-    if (!t || !t->vtable || !t->vtable->poll) {
+    if (!t || !t->vtable) {
         log_error("transport_poll: invalid transport");
         return -1;
     }
-    return t->vtable->poll(t, timeout_ms);
+    transport_vtable_t *vtable = (transport_vtable_t *)t->vtable;
+    if (!vtable->poll) return -1;
+    return vtable->poll(t, timeout_ms);
 }
 
 int transport_broadcast(transport_t *t, const message_t *msg)
 {
-    if (!t || !t->vtable || !t->vtable->broadcast) {
+    if (!t || !t->vtable) {
         log_error("transport_broadcast: invalid transport");
         return -1;
     }
-    return t->vtable->broadcast(t, msg);
+    transport_vtable_t *vtable = (transport_vtable_t *)t->vtable;
+    if (!vtable->broadcast) return -1;
+    return vtable->broadcast(t, msg);
 }
 
 void transport_get_stats(const transport_t *t, transport_stats_t *stats)
 {
-    if (!t || !t->vtable || !t->vtable->get_stats) {
+    if (!t || !t->vtable) {
         log_error("transport_get_stats: invalid transport");
         return;
     }
-    t->vtable->get_stats(t, stats);
+    transport_vtable_t *vtable = (transport_vtable_t *)t->vtable;
+    if (!vtable->get_stats) return;
+    vtable->get_stats(t, stats);
 }
 
 int transport_worker_count(const transport_t *t)
 {
-    if (!t || !t->vtable || !t->vtable->worker_count) {
+    if (!t || !t->vtable) {
         log_error("transport_worker_count: invalid transport");
         return -1;
     }
-    return t->vtable->worker_count(t);
+    transport_vtable_t *vtable = (transport_vtable_t *)t->vtable;
+    if (!vtable->worker_count) return -1;
+    return vtable->worker_count(t);
 }
 
 int transport_get_rank(const transport_t *t)
 {
-    if (!t || !t->vtable || !t->vtable->get_rank) {
+    if (!t || !t->vtable) {
         log_error("transport_get_rank: invalid transport");
         return -1;
     }
-    return t->vtable->get_rank(t);
+    transport_vtable_t *vtable = (transport_vtable_t *)t->vtable;
+    if (!vtable->get_rank) return -1;
+    return vtable->get_rank(t);
 }
 
 /*
