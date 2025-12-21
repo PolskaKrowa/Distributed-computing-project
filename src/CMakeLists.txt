@@ -9,6 +9,11 @@ add_library(common_lib STATIC
     common/log.h
 )
 
+if(ENABLE_MPI)
+    target_link_libraries(your_target PUBLIC MPI::MPI_C)
+    target_include_directories(your_target PUBLIC ${MPI_C_INCLUDE_DIRS})
+endif()
+
 target_include_directories(common_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/include
