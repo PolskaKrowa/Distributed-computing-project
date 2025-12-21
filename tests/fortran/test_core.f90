@@ -200,7 +200,7 @@ contains
     
     subroutine test_numerics(failures)
         integer, intent(inout) :: failures
-        real(wp) :: x(10), y(10), z
+        real(wp) :: x(100), y(100), z
         real(wp) :: xp(5), fp(5)
         
         print '(A)', "Testing numerics_utils module..."
