@@ -23,6 +23,14 @@ module eigen
     integer(i32), parameter, public :: EIGEN_ERR_LAPACK = 2
     integer(i32), parameter, public :: EIGEN_ERR_CONVERGENCE = 3
     
+    ! Interface for DGEES select function
+    abstract interface
+        logical function select_function_interface(wr, wi)
+            use kinds, only: wp
+            real(wp), intent(in) :: wr, wi
+        end function select_function_interface
+    end interface
+    
 contains
 
     !> Compute eigenvalues and eigenvectors of symmetric matrix
@@ -366,6 +374,7 @@ contains
         logical, allocatable :: bwork(:)
         integer :: n, lda, ldvs, lwork, info, sdim
         character :: jobvs, sort
+        procedure(select_function_interface), pointer :: select_ptr => null()
         
         n = size(A, 1)
         
@@ -389,7 +398,7 @@ contains
         
         A_copy = A
         
-        call dgees(jobvs, sort, null(), n, A_copy, lda, sdim, wr, wi, &
+        call dgees(jobvs, sort, select_ptr, n, A_copy, lda, sdim, wr, wi, &
                    Q, ldvs, work, lwork, bwork, info)
         
         T = A_copy
