@@ -56,12 +56,34 @@ void run_coordinator(transport_type_t type, const char *endpoint)
         return;
     }
 
-    /* Wait for workers to connect */
+    /* Wait for workers to connect by receiving registration messages */
     log_info("Waiting for workers to register...");
-    sleep(2);
+    int max_wait_time = 30000; /* 30 seconds max */
+    int wait_interval = 1000;  /* 1 second per receive attempt */
+    int total_waited = 0;
+
+    while (total_waited < max_wait_time) {
+        int src_rank;
+        message_t *reg_msg = transport_recv(transport, &src_rank);
+
+        if (reg_msg) {
+            if (reg_msg->header.msg_type == MSG_TYPE_WORKER_REGISTER) {
+                log_info("Worker %d registered", src_rank);
+            }
+            message_free(reg_msg);
+        }
+
+        int current_workers = transport_worker_count(transport);
+        if (current_workers > 0) {
+            log_info("Connected workers: %d", current_workers);
+            break; /* At least one worker is ready, proceed */
+        }
+
+        total_waited += wait_interval;
+    }
 
     int worker_count = transport_worker_count(transport);
-    log_info("Connected workers: %d", worker_count);
+    log_info("Final worker count: %d", worker_count);
 
     if (worker_count == 0) {
         log_warn("No workers available");
