@@ -8,11 +8,6 @@ if(NOT CMAKE_Fortran_COMPILER_LOADED)
     return()
 endif()
 
-if(ENABLE_MPI)
-    target_link_libraries(your_target PUBLIC MPI::MPI_Fortran)
-    target_include_directories(your_target PUBLIC ${MPI_Fortran_INCLUDE_DIRS})
-endif()
-
 # Create Fortran modules directory
 set(FORTRAN_MOD_DIR "${CMAKE_CURRENT_BINARY_DIR}/modules")
 file(MAKE_DIRECTORY ${FORTRAN_MOD_DIR})
