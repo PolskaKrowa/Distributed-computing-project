@@ -14,12 +14,12 @@
  *       -lpthread -lm
  */
 
-#include "runtime/task_queue.h"
-#include "runtime/resource_limits.h"
-#include "common/log.h"
-#include "common/errors.h"
-#include "include/project.h"
-#include "include/task.h"
+#include "../../src/runtime/task_queue.h"
+#include "../../src/runtime/resource_limits.h"
+#include "../../src/common/log.h"
+#include "../../src/common/errors.h"
+#include "../../include/project.h"
+#include "../../include/task.h"
 
 #include <stdio.h>
 #include <stdlib.h>

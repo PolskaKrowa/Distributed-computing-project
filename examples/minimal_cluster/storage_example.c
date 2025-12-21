@@ -13,10 +13,10 @@
  *       -lsqlite3 -lhdf5 -lm
  */
 
-#include "storage/metadata.h"
-#include "storage/hdf5_index.h"
-#include "common/log.h"
-#include "common/errors.h"
+#include "../../src/storage/metadata.h"
+#include "../../src/storage/hdf5_index.h"
+#include "../../src/common/log.h"
+#include "../../src/common/errors.h"
 
 #include <stdio.h>
 #include <stdlib.h>

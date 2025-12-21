@@ -12,9 +12,9 @@
  *   gcc transport_example.c transport_zmq.c ../common/log.c -lzmq -lpthread -o example_zmq
  */
 
-#include "transport.h"
-#include "../common/log.h"
-#include "../common/errors.h"
+#include "../../src/net/transport.h"
+#include "../../src/common/log.h"
+#include "../../src/common/errors.h"
 
 #include <stdio.h>
 #include <stdlib.h>
