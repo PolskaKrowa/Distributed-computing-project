@@ -23,11 +23,72 @@ module dense_matrix
     integer(i32), parameter, public :: MAT_ERR_SINGULAR = 2
     integer(i32), parameter, public :: MAT_ERR_LAPACK = 3
     
+    ! BLAS/LAPACK interfaces
+    interface
+        subroutine dgemv(trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
+            use kinds, only: wp
+            character, intent(in) :: trans
+            integer, intent(in) :: m, n, lda, incx, incy
+            real(wp), intent(in) :: alpha, beta
+            real(wp), intent(in) :: a(:, :), x(:)
+            real(wp), intent(inout) :: y(:)
+        end subroutine dgemv
+        
+        subroutine dgemm(transA, transB, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
+            use kinds, only: wp
+            character, intent(in) :: transA, transB
+            integer, intent(in) :: m, n, k, lda, ldb, ldc
+            real(wp), intent(in) :: alpha, beta
+            real(wp), intent(in) :: a(:, :), b(:, :)
+            real(wp), intent(inout) :: c(:, :)
+        end subroutine dgemm
+        
+        real(wp) function dlange(norm, m, n, a, lda, work)
+            use kinds, only: wp
+            character, intent(in) :: norm
+            integer, intent(in) :: m, n, lda
+            real(wp), intent(in) :: a(:, :)
+            real(wp), intent(inout) :: work(:)
+        end function dlange
+        
+        subroutine dgetrf(m, n, a, lda, ipiv, info)
+            use kinds, only: wp
+            integer, intent(in) :: m, n, lda
+            real(wp), intent(inout) :: a(:, :)
+            integer, intent(out) :: ipiv(:), info
+        end subroutine dgetrf
+        
+        subroutine dgetri(n, a, lda, ipiv, work, lwork, info)
+            use kinds, only: wp
+            integer, intent(in) :: n, lda, lwork
+            real(wp), intent(inout) :: a(:, :), work(:)
+            integer, intent(in) :: ipiv(:)
+            integer, intent(out) :: info
+        end subroutine dgetri
+        
+        subroutine dgesvd(jobu, jobvt, m, n, a, lda, s, u, ldu, vt, ldvt, work, lwork, info)
+            use kinds, only: wp
+            character, intent(in) :: jobu, jobvt
+            integer, intent(in) :: m, n, lda, ldu, ldvt, lwork
+            real(wp), intent(inout) :: a(:, :)
+            real(wp), intent(out) :: s(:), u(:, :), vt(:, :), work(:)
+            integer, intent(out) :: info
+        end subroutine dgesvd
+        
+        subroutine dpotrf(uplo, n, a, lda, info)
+            use kinds, only: wp
+            character, intent(in) :: uplo
+            integer, intent(in) :: n, lda
+            real(wp), intent(inout) :: a(:, :)
+            integer, intent(out) :: info
+        end subroutine dpotrf
+    end interface
+    
 contains
 
     !> Matrix-vector multiplication: y = alpha * A * x + beta * y
     !! Uses BLAS DGEMV
-    pure subroutine matrix_vector_mult(A, x, y, alpha, beta, trans)
+    subroutine matrix_vector_mult(A, x, y, alpha, beta, trans)
         real(wp), intent(in) :: A(:, :)
         real(wp), intent(in) :: x(:)
         real(wp), intent(inout) :: y(:)
@@ -59,7 +120,7 @@ contains
     
     !> Matrix-matrix multiplication: C = alpha * A * B + beta * C
     !! Uses BLAS DGEMM
-    pure subroutine matrix_matrix_mult(A, B, C, alpha, beta, transA, transB)
+    subroutine matrix_matrix_mult(A, B, C, alpha, beta, transA, transB)
         real(wp), intent(in) :: A(:, :), B(:, :)
         real(wp), intent(inout) :: C(:, :)
         real(wp), intent(in), optional :: alpha, beta
