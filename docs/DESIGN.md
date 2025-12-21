@@ -122,13 +122,13 @@ Distributed computing project/
 │   │   │
 │   │   ├── pde/
 │   │   │   ├── spectral.f90
-│   │   │   ├── finite_distance.f90
+│   │   │   ├── finite_difference.f90
 │   │   │   └── finite_volume.f90
 │   │   │
 │   │   ├── ode/
 │   │   │   ├── dormand_prince.f90
 │   │   │   ├── rk4.f90
-│   │   │   └── backward euler
+│   │   │   └── backward_euler.f90
 │   │   │
 │   │   ├── optimisation/
 │   │   │   ├── gradient_descent.f90
