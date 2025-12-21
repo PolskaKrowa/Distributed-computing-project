@@ -4,17 +4,22 @@
 # Find ZMQ (optional)
 find_package(ZMQ QUIET)
 
+# Determine which transport backend to use
+# Priority: ZMQ > MPI > error
 set(NET_SOURCES
     transport.c
-    transport_mpi.c
 )
 
-# Only add ZMQ transport if ZMQ is available
 if(ZMQ_FOUND)
     list(APPEND NET_SOURCES transport_zmq.c)
     set(HAVE_ZMQ 1)
+    message(STATUS "ZMQ found - will use ZMQ transport backend")
+elseif(ENABLE_MPI AND MPI_FOUND)
+    list(APPEND NET_SOURCES transport_mpi.c)
+    set(HAVE_MPI 1)
+    message(STATUS "Using MPI transport backend")
 else()
-    message(STATUS "ZMQ not found - ZMQ transport disabled")
+    message(FATAL_ERROR "No transport backend available. Install ZMQ or enable MPI.")
 endif()
 
 add_library(network_lib STATIC ${NET_SOURCES})
