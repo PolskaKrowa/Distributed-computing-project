@@ -42,8 +42,13 @@ typedef struct {
     size_t payload_capacity; /* Allocated capacity */
 } message_t;
 
-/* Transport handle (opaque) */
-typedef struct transport transport_t;
+/* Transport handle (opaque from user perspective)
+ * Backend implementations use the vtable to dispatch operations */
+typedef struct transport {
+    transport_type_t type;
+    void *vtable;      /* Function pointer table - backend specific */
+    void *impl;        /* Backend-specific implementation data */
+} transport_t;
 
 /* Connection role */
 typedef enum {

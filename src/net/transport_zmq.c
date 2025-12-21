@@ -108,9 +108,9 @@ static void zmq_update_heartbeat(struct zmq_transport *zmq, const char *identity
     pthread_mutex_unlock(&zmq->worker_lock);
 }
 
-/* Backend-specific implementations (static) */
+/* Backend-specific implementations (static, renamed to avoid ZMQ library conflicts) */
 
-static int zmq_shutdown(struct transport *t)
+static int transport_zmq_shutdown(struct transport *t)
 {
     if (!t || !t->impl) return -1;
     struct zmq_transport *zmq = (struct zmq_transport *)t->impl;
@@ -124,8 +124,7 @@ static int zmq_shutdown(struct transport *t)
         message_t *shutdown_msg = message_alloc(0);
         if (shutdown_msg) {
             message_set_header(shutdown_msg, MSG_TYPE_WORKER_SHUTDOWN, 0);
-            zmq_send(zmq->socket, &shutdown_msg->header, 
-                    sizeof(message_header_t), 0);
+            zmq_send(zmq->socket, &shutdown_msg->header, sizeof(message_header_t), 0);
             message_free(shutdown_msg);
         }
     }
@@ -140,7 +139,7 @@ static int zmq_shutdown(struct transport *t)
     return 0;
 }
 
-static int zmq_send(struct transport *t, const message_t *msg, int dst_rank)
+static int transport_zmq_send(struct transport *t, const message_t *msg, int dst_rank)
 {
     if (!t || !t->impl || !msg) return -1;
     struct zmq_transport *zmq = (struct zmq_transport *)t->impl;
@@ -160,7 +159,7 @@ static int zmq_send(struct transport *t, const message_t *msg, int dst_rank)
         const char *identity = zmq->workers[dst_rank].identity;
         
         /* Send identity frame */
-        rc = zmq_send(zmq->socket, identity, strlen(identity), ZMQ_SNDMORE);
+        rc = zmq_send(zmq->socket, (void *)identity, strlen(identity), ZMQ_SNDMORE);
         if (rc < 0) {
             pthread_mutex_unlock(&zmq->worker_lock);
             log_error("zmq_send(identity) failed: %s", zmq_strerror(errno));
@@ -172,7 +171,7 @@ static int zmq_send(struct transport *t, const message_t *msg, int dst_rank)
     } /* Workers don't need to send identity - DEALER handles it */
 
     /* Send header */
-    rc = zmq_send(zmq->socket, &msg->header, sizeof(message_header_t), 
+    rc = zmq_send(zmq->socket, (void *)&msg->header, sizeof(message_header_t), 
                   msg->header.payload_len > 0 ? ZMQ_SNDMORE : 0);
     if (rc < 0) {
         log_error("zmq_send(header) failed: %s", zmq_strerror(errno));
@@ -200,7 +199,7 @@ static int zmq_send(struct transport *t, const message_t *msg, int dst_rank)
     return 0;
 }
 
-static message_t *zmq_recv(struct transport *t, int *src_rank)
+static message_t *transport_zmq_recv(struct transport *t, int *src_rank)
 {
     if (!t || !t->impl) return NULL;
     struct zmq_transport *zmq = (struct zmq_transport *)t->impl;
@@ -310,7 +309,7 @@ static message_t *zmq_recv(struct transport *t, int *src_rank)
     return msg;
 }
 
-static int zmq_poll(struct transport *t, int timeout_ms)
+static int transport_zmq_poll(struct transport *t, int timeout_ms)
 {
     if (!t || !t->impl) return -1;
     struct zmq_transport *zmq = (struct zmq_transport *)t->impl;
@@ -328,7 +327,7 @@ static int zmq_poll(struct transport *t, int timeout_ms)
     return (items[0].revents & ZMQ_POLLIN) ? 1 : 0;
 }
 
-static int zmq_broadcast(struct transport *t, const message_t *msg)
+static int transport_zmq_broadcast(struct transport *t, const message_t *msg)
 {
     if (!t || !t->impl || !msg) return -1;
     struct zmq_transport *zmq = (struct zmq_transport *)t->impl;
@@ -342,7 +341,7 @@ static int zmq_broadcast(struct transport *t, const message_t *msg)
     int errors = 0;
     for (int i = 0; i < zmq->worker_count; i++) {
         if (zmq->workers[i].active) {
-            if (zmq_send(t, msg, i) != 0) {
+            if (transport_zmq_send(t, msg, i) != 0) {
                 errors++;
             }
         }
@@ -352,14 +351,14 @@ static int zmq_broadcast(struct transport *t, const message_t *msg)
     return errors > 0 ? -3 : 0;
 }
 
-static void zmq_get_stats(const struct transport *t, transport_stats_t *stats)
+static void transport_zmq_get_stats(const struct transport *t, transport_stats_t *stats)
 {
     if (!t || !t->impl || !stats) return;
     struct zmq_transport *zmq = (struct zmq_transport *)t->impl;
     memcpy(stats, &zmq->stats, sizeof(*stats));
 }
 
-static int zmq_worker_count(const struct transport *t)
+static int transport_zmq_worker_count(const struct transport *t)
 {
     if (!t || !t->impl) return -1;
     struct zmq_transport *zmq = (struct zmq_transport *)t->impl;
@@ -373,7 +372,7 @@ static int zmq_worker_count(const struct transport *t)
     return count;
 }
 
-static int zmq_get_rank(const struct transport *t)
+static int transport_zmq_get_rank(const struct transport *t)
 {
     if (!t || !t->impl) return -1;
     struct zmq_transport *zmq = (struct zmq_transport *)t->impl;
@@ -391,14 +390,14 @@ static struct {
     int (*worker_count)(const struct transport *t);
     int (*get_rank)(const struct transport *t);
 } zmq_vtable = {
-    .shutdown = zmq_shutdown,
-    .send = zmq_send,
-    .recv = zmq_recv,
-    .poll = zmq_poll,
-    .broadcast = zmq_broadcast,
-    .get_stats = zmq_get_stats,
-    .worker_count = zmq_worker_count,
-    .get_rank = zmq_get_rank,
+    .shutdown = transport_zmq_shutdown,
+    .send = transport_zmq_send,
+    .recv = transport_zmq_recv,
+    .poll = transport_zmq_poll,
+    .broadcast = transport_zmq_broadcast,
+    .get_stats = transport_zmq_get_stats,
+    .worker_count = transport_zmq_worker_count,
+    .get_rank = transport_zmq_get_rank,
 };
 
 int transport_init_zmq(transport_t **out, const transport_config_t *config)
@@ -515,5 +514,6 @@ int transport_init_zmq(transport_t **out, const transport_config_t *config)
     t->vtable = (void *)vtable;
     t->impl = (void *)zmq;
 
+    *out = t;
     return 0;
 }
