@@ -310,7 +310,7 @@ static void example_integrated(void)
     }
 
     /* Enqueue tasks */
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 7; i++) {
         task_t task = {
             .task_id = i + 1,
             .model_id = 100,
@@ -321,7 +321,7 @@ static void example_integrated(void)
         task_queue_enqueue(queue, &task);
     }
 
-    printf("Enqueued 8 tasks\n");
+    printf("Enqueued 7 tasks\n");
 
     /* Process tasks with resource checking */
     int processed = 0;
