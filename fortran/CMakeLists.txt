@@ -78,7 +78,6 @@ if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(fortran_core PRIVATE
         -ffree-line-length-none
         -fimplicit-none
-        -Jinclude
     )
 endif()
 
