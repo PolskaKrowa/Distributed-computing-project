@@ -153,7 +153,17 @@ static int scan_hdf5_file(const char *filepath, hdf5_file_entry_t *entry)
     };
 
     for (int i = 0; i < 5 && entry->dataset_count < 32; ++i) {
+        /* Suppress HDF5 error messages for datasets that don't exist */
+        H5E_auto_t old_func;
+        void *old_client_data;
+        H5Eget_auto(H5E_DEFAULT, &old_func, &old_client_data);
+        H5Eset_auto(H5E_DEFAULT, NULL, NULL);
+        
         hid_t dataset = H5Dopen2(file_id, common_datasets[i], H5P_DEFAULT);
+        
+        /* Restore error handler */
+        H5Eset_auto(H5E_DEFAULT, old_func, old_client_data);
+        
         if (dataset >= 0) {
             hdf5_dataset_info_t *ds_info = &entry->datasets[entry->dataset_count];
             strncpy(ds_info->name, common_datasets[i], sizeof(ds_info->name) - 1);
@@ -462,6 +472,27 @@ int hdf5_write_dataset(const char *filepath,
         return HDF5_ERR_HDF5;
     }
 
+    /* Create parent groups if needed (e.g., /input, /output) */
+    char *dataset_copy = strdup(dataset_name);
+    if (!dataset_copy) {
+        H5Fclose(file_id);
+        return HDF5_ERR_INVALID_ARG;
+    }
+
+    char *last_slash = strrchr(dataset_copy, '/');
+    if (last_slash && last_slash != dataset_copy) {
+        *last_slash = '\0';
+        htri_t exists = H5Lexists(file_id, dataset_copy, H5P_DEFAULT);
+        if (exists == 0) {
+            /* Group doesn't exist, create it */
+            hid_t group_id = H5Gcreate2(file_id, dataset_copy, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+            if (group_id >= 0) {
+                H5Gclose(group_id);
+            }
+        }
+    }
+    free(dataset_copy);
+
     /* Create dataspace */
     hsize_t h5_dims[8];
     for (size_t i = 0; i < rank && i < 8; ++i) {
@@ -534,9 +565,19 @@ int hdf5_read_dataset(const char *filepath,
         return HDF5_ERR_HDF5;
     }
 
+    /* Suppress error messages for datasets that might not exist */
+    H5E_auto_t old_func;
+    void *old_client_data;
+    H5Eget_auto(H5E_DEFAULT, &old_func, &old_client_data);
+    H5Eset_auto(H5E_DEFAULT, NULL, NULL);
+    
     hid_t dataset_id = H5Dopen2(file_id, dataset_name, H5P_DEFAULT);
+    
+    /* Restore error handler */
+    H5Eset_auto(H5E_DEFAULT, old_func, old_client_data);
+    
     if (dataset_id < 0) {
-        log_error("Failed to open dataset %s", dataset_name);
+        log_debug("Dataset %s not found in %s", dataset_name, filepath);
         H5Fclose(file_id);
         return HDF5_ERR_NOT_FOUND;
     }
