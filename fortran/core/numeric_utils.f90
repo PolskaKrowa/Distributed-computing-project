@@ -245,16 +245,19 @@ contains
     elemental function is_finite(x) result(finite)
         real(wp), intent(in) :: x
         logical :: finite
-        
-        finite = .not. (ieee_is_nan(x) .or. (.not. ieee_is_finite(x)))
+
+        ! NaN is the only value for which (x /= x) is true.
+        ! Infinity will have magnitude greater than huge(1.0_wp).
+        finite = .not. (x /= x) .and. (abs(x) <= huge(1.0_wp))
     end function is_finite
-    
+
     !> Check if value is NaN
     elemental function is_nan(x) result(nan)
         real(wp), intent(in) :: x
         logical :: nan
-        
-        nan = ieee_is_nan(x)
+
+        ! NaN compares unequal to itself
+        nan = (x /= x)
     end function is_nan
 
 end module numerics_utils
