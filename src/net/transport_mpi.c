@@ -12,8 +12,8 @@
 #define MPI_TAG_HEADER  1
 #define MPI_TAG_PAYLOAD 2
 
-/* Transport implementation for MPI */
-struct transport {
+/* MPI-specific transport implementation structure */
+struct mpi_transport {
     transport_type_t type;
     transport_role_t role;
     int rank;
@@ -53,80 +53,53 @@ static int mpi_probe_with_timeout(MPI_Comm comm, int source, int tag,
     return 0; /* timeout */
 }
 
-int transport_init_mpi(transport_t **out, const transport_config_t *config)
+/* Backend-specific implementations (static) */
+
+static int mpi_shutdown(struct transport *t)
 {
-    if (!out || !config) return -1;
-
-    /* Initialize MPI if not already done */
-    int initialized;
-    MPI_Initialized(&initialized);
-    if (!initialized) {
-        int rc = MPI_Init(NULL, NULL);
-        if (rc != MPI_SUCCESS) {
-            log_error("MPI_Init failed");
-            return -3;
-        }
-    }
-
-    transport_t *t = calloc(1, sizeof(*t));
-    if (!t) return -4;
-
-    t->type = TRANSPORT_TYPE_MPI;
-    t->role = config->role;
-    t->timeout_ms = config->timeout_ms;
-    t->comm = MPI_COMM_WORLD;
-
-    MPI_Comm_rank(t->comm, &t->rank);
-    MPI_Comm_size(t->comm, &t->size);
-
-    log_info("MPI transport initialized (rank=%d, size=%d, role=%s)",
-             t->rank, t->size,
-             t->role == TRANSPORT_ROLE_COORDINATOR ? "coordinator" : "worker");
-
-    *out = t;
-    return 0;
-}
-
-int transport_shutdown(transport_t *t)
-{
-    if (!t) return -1;
+    if (!t || !t->impl) return -1;
+    struct mpi_transport *mpi = (struct mpi_transport *)t->impl;
 
     log_info("MPI transport shutting down (rank=%d, sent=%lu, recv=%lu)",
-             t->rank, t->stats.messages_sent, t->stats.messages_received);
+             mpi->rank, mpi->stats.messages_sent, mpi->stats.messages_received);
 
+    free(mpi);
+    free(t->vtable);
     free(t);
 
     /* Don't finalize MPI here - caller may need to do cleanup first */
     return 0;
 }
 
-int transport_send(transport_t *t, const message_t *msg, int dst_rank)
+static int mpi_send(struct transport *t, const message_t *msg, int dst_rank)
 {
-    if (!t || !msg) return -1;
+    if (!t || !t->impl || !msg) return -1;
+    struct mpi_transport *mpi = (struct mpi_transport *)t->impl;
+    
     if (message_validate(msg) != 0) return -2;
 
     /* Send header */
     int rc = MPI_Send(&msg->header, sizeof(message_header_t), MPI_BYTE,
-                      dst_rank, MPI_TAG_HEADER, t->comm);
+                      dst_rank, MPI_TAG_HEADER, mpi->comm);
     if (rc != MPI_SUCCESS) {
         log_error("MPI_Send header failed to rank %d", dst_rank);
-        t->stats.errors++;
+        mpi->stats.errors++;
         return -3;
     }
 
     /* Send payload if present */
     if (msg->header.payload_len > 0 && msg->payload) {
         rc = MPI_Send(msg->payload, msg->header.payload_len, MPI_BYTE,
-                      dst_rank, MPI_TAG_PAYLOAD, t->comm);
+                      dst_rank, MPI_TAG_PAYLOAD, mpi->comm);
         if (rc != MPI_SUCCESS) {
             log_error("MPI_Send payload failed to rank %d", dst_rank);
-            t->stats.errors++;
+            mpi->stats.errors++;
             return -4;
         }
     }
 
-    t->stats.messages_sent++;
-    t->stats.bytes_sent += sizeof(message_header_t) + msg->header.payload_len;
+    mpi->stats.messages_sent++;
+    mpi->stats.bytes_sent += sizeof(message_header_t) + msg->header.payload_len;
 
     log_debug("MPI sent message type=%s to rank=%d (task=%lu, payload=%u bytes)",
               message_type_to_string(msg->header.msg_type), dst_rank,
@@ -135,19 +108,20 @@ int transport_send(transport_t *t, const message_t *msg, int dst_rank)
     return 0;
 }
 
-message_t *transport_recv(transport_t *t, int *src_rank)
+static message_t *mpi_recv(struct transport *t, int *src_rank)
 {
-    if (!t) return NULL;
+    if (!t || !t->impl) return NULL;
+    struct mpi_transport *mpi = (struct mpi_transport *)t->impl;
 
     MPI_Status status;
 
     /* Probe for header */
-    int probe_rc = mpi_probe_with_timeout(t->comm, MPI_ANY_SOURCE, 
-                                          MPI_TAG_HEADER, t->timeout_ms, &status);
+    int probe_rc = mpi_probe_with_timeout(mpi->comm, MPI_ANY_SOURCE, 
+                                          MPI_TAG_HEADER, mpi->timeout_ms, &status);
     if (probe_rc <= 0) {
         if (probe_rc < 0) {
             log_error("MPI_Probe failed");
-            t->stats.errors++;
+            mpi->stats.errors++;
         }
         return NULL; /* timeout or error */
     }
@@ -157,10 +131,10 @@ message_t *transport_recv(transport_t *t, int *src_rank)
     /* Receive header */
     message_header_t header;
     int rc = MPI_Recv(&header, sizeof(header), MPI_BYTE,
-                      source, MPI_TAG_HEADER, t->comm, &status);
+                      source, MPI_TAG_HEADER, mpi->comm, &status);
     if (rc != MPI_SUCCESS) {
         log_error("MPI_Recv header failed from rank %d", source);
-        t->stats.errors++;
+        mpi->stats.errors++;
         return NULL;
     }
 
@@ -176,11 +150,11 @@ message_t *transport_recv(transport_t *t, int *src_rank)
     /* Receive payload if present */
     if (header.payload_len > 0) {
         rc = MPI_Recv(msg->payload, header.payload_len, MPI_BYTE,
-                      source, MPI_TAG_PAYLOAD, t->comm, &status);
+                      source, MPI_TAG_PAYLOAD, mpi->comm, &status);
         if (rc != MPI_SUCCESS) {
             log_error("MPI_Recv payload failed from rank %d", source);
             message_free(msg);
-            t->stats.errors++;
+            mpi->stats.errors++;
             return NULL;
         }
     }
@@ -194,8 +168,8 @@ message_t *transport_recv(transport_t *t, int *src_rank)
 
     if (src_rank) *src_rank = source;
 
-    t->stats.messages_received++;
-    t->stats.bytes_received += sizeof(message_header_t) + header.payload_len;
+    mpi->stats.messages_received++;
+    mpi->stats.bytes_received += sizeof(message_header_t) + header.payload_len;
 
     log_debug("MPI received message type=%s from rank=%d (task=%lu, payload=%u bytes)",
               message_type_to_string(msg->header.msg_type), source,
@@ -204,27 +178,30 @@ message_t *transport_recv(transport_t *t, int *src_rank)
     return msg;
 }
 
-int transport_poll(transport_t *t, int timeout_ms)
+static int mpi_poll(struct transport *t, int timeout_ms)
 {
-    if (!t) return -1;
+    if (!t || !t->impl) return -1;
+    struct mpi_transport *mpi = (struct mpi_transport *)t->impl;
 
     MPI_Status status;
-    return mpi_probe_with_timeout(t->comm, MPI_ANY_SOURCE, 
+    return mpi_probe_with_timeout(mpi->comm, MPI_ANY_SOURCE, 
                                    MPI_TAG_HEADER, timeout_ms, &status);
 }
 
-int transport_broadcast(transport_t *t, const message_t *msg)
+static int mpi_broadcast(struct transport *t, const message_t *msg)
 {
-    if (!t || !msg) return -1;
-    if (t->role != TRANSPORT_ROLE_COORDINATOR) {
+    if (!t || !t->impl || !msg) return -1;
+    struct mpi_transport *mpi = (struct mpi_transport *)t->impl;
+    
+    if (mpi->role != TRANSPORT_ROLE_COORDINATOR) {
         log_error("Only coordinator can broadcast");
         return -2;
     }
 
     /* In MPI, broadcast to all workers (ranks 1 through size-1) */
     int errors = 0;
-    for (int i = 1; i < t->size; i++) {
-        if (transport_send(t, msg, i) != 0) {
+    for (int i = 1; i < mpi->size; i++) {
+        if (mpi_send(t, msg, i) != 0) {
             errors++;
         }
     }
@@ -232,22 +209,114 @@ int transport_broadcast(transport_t *t, const message_t *msg)
     return errors > 0 ? -3 : 0;
 }
 
-void transport_get_stats(const transport_t *t, transport_stats_t *stats)
+static void mpi_get_stats(const struct transport *t, transport_stats_t *stats)
 {
-    if (!t || !stats) return;
-    memcpy(stats, &t->stats, sizeof(*stats));
+    if (!t || !t->impl || !stats) return;
+    struct mpi_transport *mpi = (struct mpi_transport *)t->impl;
+    memcpy(stats, &mpi->stats, sizeof(*stats));
 }
 
-int transport_worker_count(const transport_t *t)
+static int mpi_worker_count(const struct transport *t)
 {
-    if (!t) return -1;
-    if (t->role != TRANSPORT_ROLE_COORDINATOR) return -2;
+    if (!t || !t->impl) return -1;
+    struct mpi_transport *mpi = (struct mpi_transport *)t->impl;
+    
+    if (mpi->role != TRANSPORT_ROLE_COORDINATOR) return -2;
     
     /* In MPI, all ranks except 0 (coordinator) are workers */
-    return t->size - 1;
+    return mpi->size - 1;
 }
 
-int transport_get_rank(const transport_t *t)
+static int mpi_get_rank(const struct transport *t)
 {
-    return t ? t->rank : -1;
+    if (!t || !t->impl) return -1;
+    struct mpi_transport *mpi = (struct mpi_transport *)t->impl;
+    return mpi->rank;
+}
+
+/* Vtable for MPI backend */
+static struct {
+    int (*shutdown)(struct transport *t);
+    int (*send)(struct transport *t, const message_t *msg, int dst_rank);
+    message_t* (*recv)(struct transport *t, int *src_rank);
+    int (*poll)(struct transport *t, int timeout_ms);
+    int (*broadcast)(struct transport *t, const message_t *msg);
+    void (*get_stats)(const struct transport *t, transport_stats_t *stats);
+    int (*worker_count)(const struct transport *t);
+    int (*get_rank)(const struct transport *t);
+} mpi_vtable = {
+    .shutdown = mpi_shutdown,
+    .send = mpi_send,
+    .recv = mpi_recv,
+    .poll = mpi_poll,
+    .broadcast = mpi_broadcast,
+    .get_stats = mpi_get_stats,
+    .worker_count = mpi_worker_count,
+    .get_rank = mpi_get_rank,
+};
+
+int transport_init_mpi(transport_t **out, const transport_config_t *config)
+{
+    if (!out || !config) return -1;
+
+    /* Initialize MPI if not already done */
+    int initialized;
+    MPI_Initialized(&initialized);
+    if (!initialized) {
+        int rc = MPI_Init(NULL, NULL);
+        if (rc != MPI_SUCCESS) {
+            log_error("MPI_Init failed");
+            return -3;
+        }
+    }
+
+    /* Allocate MPI-specific structure */
+    struct mpi_transport *mpi = calloc(1, sizeof(*mpi));
+    if (!mpi) return -4;
+
+    mpi->type = TRANSPORT_TYPE_MPI;
+    mpi->role = config->role;
+    mpi->timeout_ms = config->timeout_ms;
+    mpi->comm = MPI_COMM_WORLD;
+
+    MPI_Comm_rank(mpi->comm, &mpi->rank);
+    MPI_Comm_size(mpi->comm, &mpi->size);
+
+    /* Allocate generic transport wrapper */
+    transport_t *t = calloc(1, sizeof(*t));
+    if (!t) {
+        free(mpi);
+        return -4;
+    }
+
+    /* Allocate and copy vtable */
+    struct {
+        int (*shutdown)(struct transport *t);
+        int (*send)(struct transport *t, const message_t *msg, int dst_rank);
+        message_t* (*recv)(struct transport *t, int *src_rank);
+        int (*poll)(struct transport *t, int timeout_ms);
+        int (*broadcast)(struct transport *t, const message_t *msg);
+        void (*get_stats)(const struct transport *t, transport_stats_t *stats);
+        int (*worker_count)(const struct transport *t);
+        int (*get_rank)(const struct transport *t);
+    } *vtable = malloc(sizeof(*vtable));
+    
+    if (!vtable) {
+        free(t);
+        free(mpi);
+        return -4;
+    }
+
+    memcpy(vtable, &mpi_vtable, sizeof(mpi_vtable));
+    
+    t->type = TRANSPORT_TYPE_MPI;
+    t->vtable = (void *)vtable;
+    t->impl = (void *)mpi;
+
+    log_info("MPI transport initialized (rank=%d, size=%d, role=%s)",
+             mpi->rank, mpi->size,
+             mpi->role == TRANSPORT_ROLE_COORDINATOR ? "coordinator" : "worker");
+
+    *out = t;
+    return 0;
 }

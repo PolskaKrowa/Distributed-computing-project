@@ -3,6 +3,7 @@
  * 
  * Routes transport_init() calls to the appropriate implementation
  * (MPI or ZeroMQ) based on the configuration.
+ * Uses function pointers (vtable) to dispatch operations to backend implementations.
  */
 
 #include "transport.h"
@@ -10,6 +11,25 @@
 
 #include <stdlib.h>
 #include <string.h>
+
+/* Function pointer typedef for backend operations */
+typedef struct {
+    int (*shutdown)(struct transport *t);
+    int (*send)(struct transport *t, const message_t *msg, int dst_rank);
+    message_t* (*recv)(struct transport *t, int *src_rank);
+    int (*poll)(struct transport *t, int timeout_ms);
+    int (*broadcast)(struct transport *t, const message_t *msg);
+    void (*get_stats)(const struct transport *t, transport_stats_t *stats);
+    int (*worker_count)(const struct transport *t);
+    int (*get_rank)(const struct transport *t);
+} transport_vtable_t;
+
+/* Transport implementation structure */
+struct transport {
+    transport_type_t type;
+    transport_vtable_t *vtable;  /* Function pointers */
+    void *impl;                   /* Backend-specific data */
+};
 
 /* Forward declarations of implementation-specific init functions */
 #ifdef HAVE_MPI
@@ -49,6 +69,82 @@ int transport_init(transport_t **out, const transport_config_t *config)
             log_error("transport_init: unknown transport type %d", config->type);
             return -2;
     }
+}
+
+/*
+ * Public dispatch functions - delegate to backend via vtable
+ */
+
+int transport_shutdown(transport_t *t)
+{
+    if (!t || !t->vtable || !t->vtable->shutdown) {
+        log_error("transport_shutdown: invalid transport");
+        return -1;
+    }
+    return t->vtable->shutdown(t);
+}
+
+int transport_send(transport_t *t, const message_t *msg, int dst_rank)
+{
+    if (!t || !t->vtable || !t->vtable->send) {
+        log_error("transport_send: invalid transport");
+        return -1;
+    }
+    return t->vtable->send(t, msg, dst_rank);
+}
+
+message_t *transport_recv(transport_t *t, int *src_rank)
+{
+    if (!t || !t->vtable || !t->vtable->recv) {
+        log_error("transport_recv: invalid transport");
+        return NULL;
+    }
+    return t->vtable->recv(t, src_rank);
+}
+
+int transport_poll(transport_t *t, int timeout_ms)
+{
+    if (!t || !t->vtable || !t->vtable->poll) {
+        log_error("transport_poll: invalid transport");
+        return -1;
+    }
+    return t->vtable->poll(t, timeout_ms);
+}
+
+int transport_broadcast(transport_t *t, const message_t *msg)
+{
+    if (!t || !t->vtable || !t->vtable->broadcast) {
+        log_error("transport_broadcast: invalid transport");
+        return -1;
+    }
+    return t->vtable->broadcast(t, msg);
+}
+
+void transport_get_stats(const transport_t *t, transport_stats_t *stats)
+{
+    if (!t || !t->vtable || !t->vtable->get_stats) {
+        log_error("transport_get_stats: invalid transport");
+        return;
+    }
+    t->vtable->get_stats(t, stats);
+}
+
+int transport_worker_count(const transport_t *t)
+{
+    if (!t || !t->vtable || !t->vtable->worker_count) {
+        log_error("transport_worker_count: invalid transport");
+        return -1;
+    }
+    return t->vtable->worker_count(t);
+}
+
+int transport_get_rank(const transport_t *t)
+{
+    if (!t || !t->vtable || !t->vtable->get_rank) {
+        log_error("transport_get_rank: invalid transport");
+        return -1;
+    }
+    return t->vtable->get_rank(t);
 }
 
 /*

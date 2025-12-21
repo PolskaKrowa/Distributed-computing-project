@@ -10,23 +10,18 @@ set(NET_SOURCES
     transport.c
 )
 
-# Add backends based on availability
-set(HAVE_ZMQ_BACKEND FALSE)
-set(HAVE_MPI_BACKEND FALSE)
-
+# Add backends based on availability - now both can coexist with vtable pattern
 if(ZMQ_FOUND)
     list(APPEND NET_SOURCES transport_zmq.c)
-    set(HAVE_ZMQ_BACKEND TRUE)
     message(STATUS "ZMQ found - will compile ZMQ transport backend")
 endif()
 
 if(ENABLE_MPI AND MPI_FOUND)
     list(APPEND NET_SOURCES transport_mpi.c)
-    set(HAVE_MPI_BACKEND TRUE)
     message(STATUS "MPI found - will compile MPI transport backend")
 endif()
 
-if(NOT HAVE_ZMQ_BACKEND AND NOT HAVE_MPI_BACKEND)
+if(NOT ZMQ_FOUND AND NOT (ENABLE_MPI AND MPI_FOUND))
     message(FATAL_ERROR "No transport backend available. Install ZMQ or enable MPI.")
 endif()
 
@@ -42,14 +37,14 @@ target_link_libraries(network_lib PUBLIC
 )
 
 # Link and define backends
-if(HAVE_ZMQ_BACKEND)
+if(ZMQ_FOUND)
     target_link_libraries(network_lib PUBLIC ${ZMQ_LIBRARIES})
     target_include_directories(network_lib PRIVATE ${ZMQ_INCLUDE_DIRS})
     target_compile_definitions(network_lib PUBLIC HAVE_ZMQ)
     message(STATUS "Network subsystem configured with ZMQ support")
 endif()
 
-if(HAVE_MPI_BACKEND)
+if(ENABLE_MPI AND MPI_FOUND)
     target_link_libraries(network_lib PUBLIC MPI::MPI_C)
     target_include_directories(network_lib PUBLIC ${MPI_C_INCLUDE_DIRS})
     target_compile_definitions(network_lib PUBLIC HAVE_MPI)
