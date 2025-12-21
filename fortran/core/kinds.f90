@@ -75,7 +75,7 @@ contains
         case(dp)
             big = huge(1.0_dp)
         case(qp)
-            big = real(huge(1.0_qp), dp)
+            big = huge(1.0_dp)
         case default
             big = huge(1.0_dp)
         end select
