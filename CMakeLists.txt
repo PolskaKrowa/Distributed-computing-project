@@ -66,6 +66,8 @@ if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU|Clang")
     )
 endif()
 
+add_compile_definitions(_POSIX_C_SOURCE=200809L)
+
 # Debug flags
 set(CMAKE_C_FLAGS_DEBUG "-g -O0 -DDEBUG")
 set(CMAKE_Fortran_FLAGS_DEBUG "-g -O0 -DDEBUG")
