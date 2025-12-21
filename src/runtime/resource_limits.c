@@ -411,16 +411,6 @@ int resource_limits_reserve_task(resource_limits_t *limits)
         return -1;
     }
     
-    /* Check memory */
-    if (limits->max_memory_bytes > 0 &&
-        limits->stats.memory_rss_bytes >= limits->max_memory_bytes * 0.9) {
-        pthread_mutex_unlock(&limits->mutex);
-        log_warn("Cannot reserve task: memory usage too high (%.1f MB / %.1f MB)",
-                 limits->stats.memory_rss_bytes / (1024.0 * 1024.0),
-                 limits->max_memory_bytes / (1024.0 * 1024.0));
-        return -2;
-    }
-    
     limits->tasks_running++;
     
     pthread_mutex_unlock(&limits->mutex);
