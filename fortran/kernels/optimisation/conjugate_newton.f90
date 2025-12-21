@@ -219,7 +219,7 @@ contains
     
     !> Strong Wolfe line search
     function strong_wolfe_line_search(f, grad_f, x, direction, grad, &
-                                          tol, func_evals) result(alpha)
+                                      tol, func_evals) result(alpha)
         procedure(objective_func) :: f
         procedure(gradient_func) :: grad_f
         real(wp), intent(in) :: x(:), direction(:), grad(:), tol
