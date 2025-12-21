@@ -325,7 +325,7 @@ Fortran never calls back into C.
 ### Fortran coding rules
 
 - Use `implicit none` everywhere
-- Use modern Fortran (2008 or newer)
+- Use modern Fortran standards (2008 or newer)
 - Prefer pure and elemental procedures where possible
 - No global mutable state
 - No random behaviour without explicit seeding
