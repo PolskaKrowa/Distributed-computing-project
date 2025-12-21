@@ -37,6 +37,65 @@ int transport_init(transport_t **out, const transport_config_t *config)
 }
 
 /*
+ * Message utility functions - backend agnostic
+ */
+
+message_t *message_alloc(size_t payload_capacity)
+{
+    message_t *msg = calloc(1, sizeof(*msg));
+    if (!msg) return NULL;
+
+    if (payload_capacity > 0) {
+        msg->payload = malloc(payload_capacity);
+        if (!msg->payload) {
+            free(msg);
+            return NULL;
+        }
+    }
+
+    msg->payload_capacity = payload_capacity;
+    msg->header.magic = 0xDA7A1E00; /* MESSAGE_MAGIC */
+    msg->header.version = 1;        /* ENVELOPE_VERSION */
+
+    return msg;
+}
+
+void message_free(message_t *msg)
+{
+    if (!msg) return;
+    free(msg->payload);
+    free(msg);
+}
+
+void message_set_header(message_t *msg, uint16_t msg_type, uint64_t task_id)
+{
+    if (!msg) return;
+    msg->header.msg_type = msg_type;
+    msg->header.task_id = task_id;
+}
+
+int message_validate(const message_t *msg)
+{
+    if (!msg) return -1;
+    if (msg->header.magic != 0xDA7A1E00) { /* MESSAGE_MAGIC */
+        log_error("Invalid message magic: 0x%08x (expected 0x%08x)",
+                  msg->header.magic, 0xDA7A1E00);
+        return -2;
+    }
+    if (msg->header.version != 1) { /* ENVELOPE_VERSION */
+        log_warn("Message version mismatch: %d (expected %d)",
+                 msg->header.version, 1);
+        return -3;
+    }
+    if (msg->header.payload_len > msg->payload_capacity) {
+        log_error("Payload length (%u) exceeds capacity (%zu)",
+                  msg->header.payload_len, msg->payload_capacity);
+        return -4;
+    }
+    return 0;
+}
+
+/*
  * Convert transport type to string
  */
 const char *transport_type_to_string(transport_type_t type)

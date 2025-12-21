@@ -100,61 +100,6 @@ int transport_shutdown(transport_t *t)
     return 0;
 }
 
-message_t *message_alloc(size_t payload_capacity)
-{
-    message_t *msg = calloc(1, sizeof(*msg));
-    if (!msg) return NULL;
-
-    if (payload_capacity > 0) {
-        msg->payload = malloc(payload_capacity);
-        if (!msg->payload) {
-            free(msg);
-            return NULL;
-        }
-    }
-
-    msg->payload_capacity = payload_capacity;
-    msg->header.magic = MESSAGE_MAGIC;
-    msg->header.version = ENVELOPE_VERSION;
-
-    return msg;
-}
-
-void message_free(message_t *msg)
-{
-    if (!msg) return;
-    free(msg->payload);
-    free(msg);
-}
-
-void message_set_header(message_t *msg, uint16_t msg_type, uint64_t task_id)
-{
-    if (!msg) return;
-    msg->header.msg_type = msg_type;
-    msg->header.task_id = task_id;
-}
-
-int message_validate(const message_t *msg)
-{
-    if (!msg) return -1;
-    if (msg->header.magic != MESSAGE_MAGIC) {
-        log_error("Invalid message magic: 0x%08x (expected 0x%08x)",
-                  msg->header.magic, MESSAGE_MAGIC);
-        return -2;
-    }
-    if (msg->header.version != ENVELOPE_VERSION) {
-        log_warn("Message version mismatch: %d (expected %d)",
-                 msg->header.version, ENVELOPE_VERSION);
-        return -3;
-    }
-    if (msg->header.payload_len > msg->payload_capacity) {
-        log_error("Payload length (%u) exceeds capacity (%zu)",
-                  msg->header.payload_len, msg->payload_capacity);
-        return -4;
-    }
-    return 0;
-}
-
 int transport_send(transport_t *t, const message_t *msg, int dst_rank)
 {
     if (!t || !msg) return -1;
@@ -305,28 +250,4 @@ int transport_worker_count(const transport_t *t)
 int transport_get_rank(const transport_t *t)
 {
     return t ? t->rank : -1;
-}
-
-const char *message_type_to_string(message_type_t type)
-{
-    switch (type) {
-        case MSG_TYPE_HEARTBEAT:       return "HEARTBEAT";
-        case MSG_TYPE_TASK_SUBMIT:     return "TASK_SUBMIT";
-        case MSG_TYPE_TASK_RESULT:     return "TASK_RESULT";
-        case MSG_TYPE_TASK_CANCEL:     return "TASK_CANCEL";
-        case MSG_TYPE_WORKER_REGISTER: return "WORKER_REGISTER";
-        case MSG_TYPE_WORKER_SHUTDOWN: return "WORKER_SHUTDOWN";
-        case MSG_TYPE_COORDINATOR_CMD: return "COORDINATOR_CMD";
-        case MSG_TYPE_ERROR:           return "ERROR";
-        default:                       return "UNKNOWN";
-    }
-}
-
-const char *transport_type_to_string(transport_type_t type)
-{
-    switch (type) {
-        case TRANSPORT_TYPE_MPI: return "MPI";
-        case TRANSPORT_TYPE_ZMQ: return "ZeroMQ";
-        default:                 return "UNKNOWN";
-    }
 }
