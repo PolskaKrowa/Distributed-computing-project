@@ -11,6 +11,7 @@
 !   ./test_core
 !
 program test_core
+    use iso_fortran_env
     use kinds
     use constants
     use rng
