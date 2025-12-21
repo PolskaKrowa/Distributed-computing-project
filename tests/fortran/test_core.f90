@@ -247,7 +247,7 @@ contains
         end if
         
         ! Test norm2
-        x = [3.0_wp, 4.0_wp, 0.0_wp, 0.0_wp, 0.0_wp, &
+        x(1:10) = [3.0_wp, 4.0_wp, 0.0_wp, 0.0_wp, 0.0_wp, &
              0.0_wp, 0.0_wp, 0.0_wp, 0.0_wp, 0.0_wp]
         z = norm2(x(1:2))
         if (.not. nearly_equal(z, 5.0_wp)) then
