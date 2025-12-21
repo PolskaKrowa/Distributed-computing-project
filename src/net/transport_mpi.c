@@ -53,10 +53,9 @@ static int mpi_probe_with_timeout(MPI_Comm comm, int source, int tag,
     return 0; /* timeout */
 }
 
-int transport_init(transport_t **out, const transport_config_t *config)
+int transport_init_mpi(transport_t **out, const transport_config_t *config)
 {
     if (!out || !config) return -1;
-    if (config->type != TRANSPORT_TYPE_MPI) return -2;
 
     /* Initialize MPI if not already done */
     int initialized;

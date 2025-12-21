@@ -5,7 +5,7 @@
 find_package(ZMQ QUIET)
 
 set(NET_SOURCES
-    transport.h
+    transport.c
     transport_mpi.c
 )
 

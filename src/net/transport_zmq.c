@@ -106,10 +106,9 @@ static void update_heartbeat(transport_t *t, const char *identity)
     pthread_mutex_unlock(&t->worker_lock);
 }
 
-int transport_init(transport_t **out, const transport_config_t *config)
+int transport_init_zmq(transport_t **out, const transport_config_t *config)
 {
     if (!out || !config) return -1;
-    if (config->type != TRANSPORT_TYPE_ZMQ) return -2;
 
     transport_t *t = calloc(1, sizeof(*t));
     if (!t) return -3;

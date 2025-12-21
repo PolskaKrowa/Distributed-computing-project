@@ -1,15 +1,29 @@
 # src/worker/CMakeLists.txt
 # Builds the worker node orchestration subsystem
 
-# Placeholder for worker sources
-# This directory will contain the worker process management and task execution logic
+set(WORKER_SOURCES
+    worker.c
+)
 
-# If sources exist, they would be added here:
-# set(WORKER_SOURCES
-#     worker_process.c
-#     task_executor.c
-#     resource_monitor.c
-# )
+add_executable(worker ${WORKER_SOURCES})
 
-# For now, just document the expected structure
-message(STATUS "Worker subsystem: (sources pending)")
+target_include_directories(worker PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_link_libraries(worker PUBLIC
+    common_lib
+    network_lib
+    runtime_lib
+)
+
+set_target_properties(worker PROPERTIES
+    C_STANDARD 11
+)
+
+# Install worker to bin directory
+install(TARGETS worker DESTINATION bin)
+
+message(STATUS "Worker subsystem configured")
