@@ -67,6 +67,14 @@ target_link_libraries(fortran_core PUBLIC
     ${LAPACK_LIBRARIES}
 )
 
+# Link against MPI if enabled
+if(ENABLE_MPI AND MPI_FOUND)
+    target_link_libraries(fortran_core PUBLIC MPI::MPI_Fortran)
+    target_include_directories(fortran_core PUBLIC ${MPI_Fortran_INCLUDE_DIRS})
+    target_compile_definitions(fortran_core PUBLIC HAVE_MPI)
+    message(STATUS "Fortran core library configured with MPI support")
+endif()
+
 # Include directories
 target_include_directories(fortran_core PUBLIC
     ${CMAKE_CURRENT_BINARY_DIR}
