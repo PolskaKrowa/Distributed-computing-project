@@ -52,7 +52,7 @@ void run_coordinator(transport_type_t type, const char *endpoint)
 
     transport_t *transport;
     if (transport_init(&transport, &config) != 0) {
-        log_fatal("Failed to initialise transport");
+        log_error("Failed to initialise transport");
         return;
     }
 
@@ -158,7 +158,7 @@ void run_worker(transport_type_t type, const char *endpoint)
 
     transport_t *transport;
     if (transport_init(&transport, &config) != 0) {
-        log_fatal("Failed to initialise transport");
+        log_error("Failed to initialise transport");
         return;
     }
 
