@@ -407,7 +407,7 @@ int metadata_store_query(metadata_store_t *store,
                          size_t *count)
 {
     if (!store || !results || !count) {
-        log_error("metadata_store_query: NULL argument");
+        log_error("metadata_store_query: NULL argument provided in function call");
         return META_ERR_INVALID_ARG;
     }
 

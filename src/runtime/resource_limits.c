@@ -5,6 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <time.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/statvfs.h>
@@ -60,7 +61,7 @@ resource_limits_t *resource_limits_create(const resource_limits_config_t *config
     
     resource_limits_t *limits = calloc(1, sizeof(*limits));
     if (!limits) {
-        log_error("Failed to allocate resource limits");
+        log_error("Failed to allocate resource limits: %s", "malloc returned NULL");
         return NULL;
     }
     
@@ -414,7 +415,9 @@ int resource_limits_reserve_task(resource_limits_t *limits)
     if (limits->max_memory_bytes > 0 &&
         limits->stats.memory_rss_bytes >= limits->max_memory_bytes * 0.9) {
         pthread_mutex_unlock(&limits->mutex);
-        log_warn("Cannot reserve task: memory usage too high");
+        log_warn("Cannot reserve task: memory usage too high (%.1f MB / %.1f MB)",
+                 limits->stats.memory_rss_bytes / (1024.0 * 1024.0),
+                 limits->max_memory_bytes / (1024.0 * 1024.0));
         return -2;
     }
     
@@ -510,7 +513,7 @@ void resource_limits_reset_stats(resource_limits_t *limits)
     
     pthread_mutex_unlock(&limits->mutex);
     
-    log_info("Reset resource statistics");
+    log_info("Reset resource statistics: operation completed");
 }
 
 const char *resource_limit_status_string(limit_status_t status)
