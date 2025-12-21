@@ -506,27 +506,3 @@ int message_validate(const message_t *msg)
     }
     return 0;
 }
-
-const char *message_type_to_string(message_type_t type)
-{
-    switch (type) {
-        case MSG_TYPE_HEARTBEAT:       return "HEARTBEAT";
-        case MSG_TYPE_TASK_SUBMIT:     return "TASK_SUBMIT";
-        case MSG_TYPE_TASK_RESULT:     return "TASK_RESULT";
-        case MSG_TYPE_TASK_CANCEL:     return "TASK_CANCEL";
-        case MSG_TYPE_WORKER_REGISTER: return "WORKER_REGISTER";
-        case MSG_TYPE_WORKER_SHUTDOWN: return "WORKER_SHUTDOWN";
-        case MSG_TYPE_COORDINATOR_CMD: return "COORDINATOR_CMD";
-        case MSG_TYPE_ERROR:           return "ERROR";
-        default:                       return "UNKNOWN";
-    }
-}
-
-const char *transport_type_to_string(transport_type_t type)
-{
-    switch (type) {
-        case TRANSPORT_TYPE_MPI: return "MPI";
-        case TRANSPORT_TYPE_ZMQ: return "ZeroMQ";
-        default:                 return "UNKNOWN";
-    }
-}
