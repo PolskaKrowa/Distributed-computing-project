@@ -251,3 +251,155 @@ int transport_get_rank(const transport_t *t)
 {
     return t ? t->rank : -1;
 }
+
+int transport_send(transport_t *t, const message_t *msg, int dst_rank)
+{
+    if (!t || !msg) return -1;
+    if (message_validate(msg) != 0) return -2;
+
+    /* Send header */
+    int rc = MPI_Send(&msg->header, sizeof(message_header_t), MPI_BYTE,
+                      dst_rank, MPI_TAG_HEADER, t->comm);
+    if (rc != MPI_SUCCESS) {
+        log_error("MPI_Send header failed to rank %d", dst_rank);
+        t->stats.errors++;
+        return -3;
+    }
+
+    /* Send payload if present */
+    if (msg->header.payload_len > 0 && msg->payload) {
+        rc = MPI_Send(msg->payload, msg->header.payload_len, MPI_BYTE,
+                      dst_rank, MPI_TAG_PAYLOAD, t->comm);
+        if (rc != MPI_SUCCESS) {
+            log_error("MPI_Send payload failed to rank %d", dst_rank);
+            t->stats.errors++;
+            return -4;
+        }
+    }
+
+    t->stats.messages_sent++;
+    t->stats.bytes_sent += sizeof(message_header_t) + msg->header.payload_len;
+
+    log_debug("MPI sent message type=%s to rank=%d (task=%lu, payload=%u bytes)",
+              message_type_to_string(msg->header.msg_type), dst_rank,
+              msg->header.task_id, msg->header.payload_len);
+
+    return 0;
+}
+
+message_t *transport_recv(transport_t *t, int *src_rank)
+{
+    if (!t) return NULL;
+
+    MPI_Status status;
+
+    /* Probe for header */
+    int probe_rc = mpi_probe_with_timeout(t->comm, MPI_ANY_SOURCE, 
+                                          MPI_TAG_HEADER, t->timeout_ms, &status);
+    if (probe_rc <= 0) {
+        if (probe_rc < 0) {
+            log_error("MPI_Probe failed");
+            t->stats.errors++;
+        }
+        return NULL; /* timeout or error */
+    }
+
+    int source = status.MPI_SOURCE;
+
+    /* Receive header */
+    message_header_t header;
+    int rc = MPI_Recv(&header, sizeof(header), MPI_BYTE,
+                      source, MPI_TAG_HEADER, t->comm, &status);
+    if (rc != MPI_SUCCESS) {
+        log_error("MPI_Recv header failed from rank %d", source);
+        t->stats.errors++;
+        return NULL;
+    }
+
+    /* Allocate message */
+    message_t *msg = message_alloc(header.payload_len);
+    if (!msg) {
+        log_error("Failed to allocate message (payload=%u bytes)", header.payload_len);
+        return NULL;
+    }
+
+    memcpy(&msg->header, &header, sizeof(header));
+
+    /* Receive payload if present */
+    if (header.payload_len > 0) {
+        rc = MPI_Recv(msg->payload, header.payload_len, MPI_BYTE,
+                      source, MPI_TAG_PAYLOAD, t->comm, &status);
+        if (rc != MPI_SUCCESS) {
+            log_error("MPI_Recv payload failed from rank %d", source);
+            message_free(msg);
+            t->stats.errors++;
+            return NULL;
+        }
+    }
+
+    /* Validate message */
+    if (message_validate(msg) != 0) {
+        log_error("Received invalid message from rank %d", source);
+        message_free(msg);
+        return NULL;
+    }
+
+    if (src_rank) *src_rank = source;
+
+    t->stats.messages_received++;
+    t->stats.bytes_received += sizeof(message_header_t) + header.payload_len;
+
+    log_debug("MPI received message type=%s from rank=%d (task=%lu, payload=%u bytes)",
+              message_type_to_string(msg->header.msg_type), source,
+              msg->header.task_id, msg->header.payload_len);
+
+    return msg;
+}
+
+int transport_poll(transport_t *t, int timeout_ms)
+{
+    if (!t) return -1;
+
+    MPI_Status status;
+    return mpi_probe_with_timeout(t->comm, MPI_ANY_SOURCE, 
+                                   MPI_TAG_HEADER, timeout_ms, &status);
+}
+
+int transport_broadcast(transport_t *t, const message_t *msg)
+{
+    if (!t || !msg) return -1;
+    if (t->role != TRANSPORT_ROLE_COORDINATOR) {
+        log_error("Only coordinator can broadcast");
+        return -2;
+    }
+
+    /* In MPI, broadcast to all workers (ranks 1 through size-1) */
+    int errors = 0;
+    for (int i = 1; i < t->size; i++) {
+        if (transport_send(t, msg, i) != 0) {
+            errors++;
+        }
+    }
+
+    return errors > 0 ? -3 : 0;
+}
+
+void transport_get_stats(const transport_t *t, transport_stats_t *stats)
+{
+    if (!t || !stats) return;
+    memcpy(stats, &t->stats, sizeof(*stats));
+}
+
+int transport_worker_count(const transport_t *t)
+{
+    if (!t) return -1;
+    if (t->role != TRANSPORT_ROLE_COORDINATOR) return -2;
+    
+    /* In MPI, all ranks except 0 (coordinator) are workers */
+    return t->size - 1;
+}
+
+int transport_get_rank(const transport_t *t)
+{
+    return t ? t->rank : -1;
+}
