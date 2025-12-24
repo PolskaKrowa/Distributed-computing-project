@@ -15,8 +15,18 @@ if(CMAKE_Fortran_COMPILER_LOADED)
         Fortran_MODULE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/modules
     )
 
+    add_executable(root_find root_find.f90)
+    target_link_libraries(root_find PRIVATE
+        fortran_core
+    )
+
+    set_target_properties(root_find PROPERTIES
+        Fortran_MODULE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/modules
+    )
+
     # Install examples to bin directory
     install(TARGETS example_damped_oscil DESTINATION bin)
+    install(TARGETS root_find DESTINATION bin)
     message(STATUS "Fortran example programs configured")
 else()
     message(STATUS "Fortran compiler not available. Fortran examples will be skipped.")
