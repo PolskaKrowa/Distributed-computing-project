@@ -32,6 +32,15 @@ set(FORTRAN_KERNEL_SOURCES
     kernels/pde/finite_difference.f90
     kernels/pde/finite_volume.f90
     kernels/pde/spectral.f90
+    kernels/ode/backward_euler.f90
+    kernels/ode/dormand_prince.f90
+    kernels/ode/rk4.f90
+    kernels/optimisation/conjugate_newton.f90
+    kernels/optimisation/constrained.f90
+    kernels/optimisation/gradient_descent.f90
+    kernels/optimisation/quasi_newton.f90
+    kernels/root_find/newton_rhapson.f90
+    kernels/root_find/secant.f90
 )
 
 set(FORTRAN_INTERFACE_SOURCES
