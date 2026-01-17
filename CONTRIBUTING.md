@@ -147,6 +147,8 @@ If you add or change behaviour:
 - Update relevant files in `docs/`
 - Add an example if possible
 
+You may consult the `docs/DESIGN.md` file for further reading about the coding standards for this project.
+
 Documentation does not need to be verbose, only correct.
 
 ---
