@@ -1,49 +1,55 @@
 # 🛰️ Distributed Computing Project
 
-A high-performance distributed platform tailored for **amateur and independent research** in physics and mathematics. We bridge the gap between high-level scientific modeling and low-level systems engineering.
+A high-performance platform for **amateur and independent research**. We combine the numerical rigor of Fortran with the systems orchestration of C to enable large-scale scientific experiments on diverse hardware.
+
+---
+
+## 🏗️ System Architecture
+
+The project utilizes a tiered distribution model. A central **Coordinator** manages a heterogeneous pool of workers, some of which may act as **Master Workers** for local high-performance clusters (MPI).
+
+```mermaid
+graph TD
+    Coord((Central Coordinator))
+    
+    subgraph "Global Network"
+    Coord --> W1[Worker 1]
+    Coord --> W2[Worker 2]
+    Coord --> MW[Master Worker]
+    Coord --> WN[Worker N]
+    end
+
+    subgraph "Local MPI Cluster"
+    MW --> S1[Sub 1]
+    MW --> S2[Sub 2]
+    MW --> S3[Sub 3]
+    MW --> S4[Sub 4]
+    end
+
+    style Coord fill:#f96,stroke:#333,stroke-width:2px
+    style MW fill:#bbf,stroke:#333,stroke-width:2px
+
+```
+
+### 🧬 Layer Responsibilities
+
+| Role | Responsibility | Language |
+| --- | --- | --- |
+| **Coordinator** | Task scheduling, worker health monitoring, data aggregation. | C |
+| **Worker** | Standard compute node processing individual work units. | C / Fortran |
+| **Master Worker** | Acts as a gateway for local clusters; translates global tasks to MPI. | C |
+| **Sub-Worker** | Executes high-speed numerical kernels within a local cluster. | Fortran |
 
 ---
 
 ## 🎯 Project Core Pillars
 
 > [!IMPORTANT]
-> This is **not** a general-purpose cloud framework. It is an **explicitly science-first** platform where numerical integrity outweighs architectural abstraction.
+> This is a **science-first** platform. Every design choice prioritizes bit-for-bit reproducibility over architectural convenience.
 
-| Feature | Description |
-| --- | --- |
-| **Numerical Correctness** | Bit-for-bit reproducibility across different runs. |
-| **Commodity Hardware** | Optimized for consumer-grade CPUs and local clusters. |
-| **Separation of Concerns** | Strict boundary between science logic and systems logic. |
-| **Inspectability** | Code is written to be read and verified by researchers, not just machines. |
-
----
-
-## 🏗️ Architecture & Language Split
-
-We utilize a "Dual-Engine" approach, leveraging the specific strengths of Fortran and C through a stable C ABI.
-
-```mermaid
-graph TD
-    subgraph "C Systems Layer (Orchestration)"
-        A[Networking & MPI] --> B[Resource Manager]
-        B --> C[Worker Scheduler]
-    end
-
-    subgraph "Fortran Science Layer (Kernels)"
-        D[Physics Models]
-        E[Math Algorithms]
-        F[Deterministic Output]
-    end
-
-    C <--> |Stable C ABI| D
-    C <--> |Stable C ABI| E
-
-```
-
-### 🧬 Responsibilities
-
-* **Fortran (The "Brain"):** Numerical kernels, math algorithms, and physics models. Minimal side effects.
-* **C (The "Body"):** Networking, messaging (MPI), worker orchestration, and metadata handling.
+* **Numerical Correctness:** Minimal side effects in kernels to ensure identical results across different architectures.
+* **Hybrid Scaling:** Efficiently utilizes everything from a single laptop to a multi-node MPI cluster.
+* **Clear Boundaries:** A strict C ABI separates the "Systems C" from the "Numerical Fortran."
 
 ---
 
@@ -58,54 +64,53 @@ graph TD
 | `fortran/` | Numerical kernels and scientific models. |
 | `include/` | Public C headers and the stable ABI definitions. |
 | `tests/` | Comprehensive unit and integration test suites. |
-| `examples/` | Reference experiments and sample configurations. |
-| `tools/` | CLI utilities for diagnostics and monitoring. |
+| `examples/` | Reference experiments (e.g., N-Body, Fluid Dynamics). |
+| `tools/` | CLI utilities for monitoring worker clusters. |
 
 </details>
 
 ---
 
-## 🛠️ Building the Project
+## 🛠️ Building & Requirements
+
+The project uses **CMake** and requires a dual-compiler environment.
 
 ### Prerequisites
 
-* **Compilers:** GCC (C11) & GFortran (2008+)
-* **Libraries:** BLAS, LAPACK
-* **Optional:** MPI for multi-node distribution
+* **C Compiler:** GCC (C11) or Clang
+* **Fortran Compiler:** GFortran (2008+)
+* **Math Libs:** BLAS and LAPACK
+* **Optional:** OpenMPI / MPICH (required for Master/Sub-worker clusters)
 
 ### Quick Start
 
 ```bash
-# Clone and enter the directory
-git clone https://github.com/user/project-name.git && cd project-name
-
-# Standard build workflow
 mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake .. -DENABLE_MPI=ON
 make -j$(nproc)
 
 ```
 
 > [!TIP]
-> For performance-critical research, ensure you link against an optimized BLAS implementation like OpenBLAS or Intel MKL.
+> If you are running on a standalone machine, you can disable MPI during the CMake step to simplify dependencies: `cmake .. -DENABLE_MPI=OFF`.
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions from researchers and engineers alike.
+We welcome contributions that expand the scientific reach of this platform.
 
 ### Current Priorities:
 
-* [ ] Implementation of Runge-Kutta 4th Order kernels.
-* [ ] Improved documentation for the C-Fortran interface.
-* [ ] Validation cases for fluid dynamics models.
+* [ ] Optimization of the C ABI for low-latency task handoff.
+* [ ] New Fortran kernels for Monte Carlo simulations.
+* [ ] Improved telemetry in the `Coordinator` dashboard.
 
 > [!NOTE]
-> Please review the `docs/fortran_guidelines.md` and `docs/c_guidelines.md` before submitting a Pull Request.
+> Please review `docs/fortran_guidelines.md` before writing kernels. We enforce **Fixed-Point** or **Deterministic Floating Point** strategies to maintain reproducibility.
 
 ---
 
 ## ⚖️ Licence
 
-Distributed under the **Apache V2 Licence**. See `LICENSE` for more information.
+Distributed under the **Apache V2 License**. See `LICENSE` for details.
