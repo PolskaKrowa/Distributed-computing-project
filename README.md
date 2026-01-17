@@ -107,7 +107,7 @@ We welcome contributions that expand the scientific reach of this platform.
 * [ ] Improved telemetry in the `Coordinator` dashboard.
 
 > [!NOTE]
-> Please review `docs/fortran_guidelines.md` before writing kernels. We enforce **Fixed-Point** or **Deterministic Floating Point** strategies to maintain reproducibility.
+> Please review `docs/DESIGN.md` before writing kernels. We enforce **Fixed-Point** or **Deterministic Floating Point** strategies to maintain reproducibility.
 
 ---
 
