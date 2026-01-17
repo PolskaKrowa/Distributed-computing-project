@@ -1,116 +1,156 @@
 # 🛰️ Distributed Computing Project
 
-A high-performance platform for **amateur and independent research**. We combine the numerical rigor of Fortran with the systems orchestration of C to enable large-scale scientific experiments on diverse hardware.
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](./LICENSE)
+[![C/Fortran](https://img.shields.io/badge/lang-C%20%2B%20Fortran-lightgrey)](#)
+
+> **Science-first distributed compute platform**: Fortran for numerical kernels, C for runtime and orchestration. Designed for reproducible, long-lived scientific computation on heterogeneous hardware.
 
 ---
 
-## 🏗️ System Architecture
+## Table of contents
 
-The project utilizes a tiered distribution model. A central **Coordinator** manages a heterogeneous pool of workers, some of which may act as **Master Workers** for local high-performance clusters (MPI).
+1. [Quick start](#quick-start)
+2. [What this project is](#what-this-project-is)
+3. [Features](#features)
+4. [Architecture at a glance](#architecture-at-a-glance)
+5. [Build and run](#build-and-run)
+6. [Testing and CI](#testing-and-ci)
+7. [Contributing](#contributing)
+8. [Roadmap & TODOs](#roadmap--todos)
+9. [Licence](#licence)
 
-```mermaid
-graph TD
-    Coord((Central Coordinator))
-    
-    subgraph "Global Network"
-    Coord --> W1[Worker 1]
-    Coord --> W2[Worker 2]
-    Coord --> MW[Master Worker]
-    Coord --> WN[Worker N]
-    end
+---
 
-    subgraph "Local MPI Cluster"
-    MW --> S1[Sub 1]
-    MW --> S2[Sub 2]
-    MW --> S3[Sub 3]
-    MW --> S4[Sub 4]
-    end
+## Quick start
 
-    style Coord fill:#a32,stroke:#333,stroke-width:2px
-    style MW fill:#44a,stroke:#333,stroke-width:2px
+Clone, build, run the minimal example.
 
+```bash
+git clone https://github.com/your-org/your-repo.git
+cd your-repo
+mkdir build && cd build
+cmake .. -DENABLE_MPI=OFF
+cmake --build . -- -j$(nproc)
+# run the coordinator locally (example)
+./bin/coordinator --config ../examples/minimal_cluster/config.yaml
 ```
 
-### 🧬 Layer Responsibilities
-
-| Role | Responsibility | Language |
-| --- | --- | --- |
-| **Coordinator** | Task scheduling, worker health monitoring, data aggregation. | C |
-| **Worker** | Standard compute node processing individual work units. | C / Fortran |
-| **Master Worker** | Acts as a gateway for local clusters; translates global tasks to MPI. | C |
-| **Sub-Worker** | Executes high-speed numerical kernels within a local cluster. | Fortran |
+See the `examples/` directory for runnable reference setups.
 
 ---
 
-## 🎯 Project Core Pillars
+## What this project is
 
-> [!IMPORTANT]
-> This is a **science-first** platform. Every design choice prioritizes bit-for-bit reproducibility over architectural convenience.
+A hybrid C and Fortran platform that separates numeric work from system-level code. Fortran implements deterministic numerical kernels and models. C implements scheduler, transport, runtime and system APIs.
 
-* **Numerical Correctness:** Minimal side effects in kernels to ensure identical results across different architectures.
-* **Hybrid Scaling:** Efficiently utilizes everything from a single laptop to a multi-node MPI cluster.
-* **Clear Boundaries:** A strict C ABI separates the "Systems C" from the "Numerical Fortran."
+This README was updated to reflect the full design and API contracts. For formal interface and design guidance see `DESIGN.md` (core architecture, ABI contracts and directory layout).
 
 ---
 
-## 📂 Repository Structure
+## Features
+
+* Explicit C / Fortran boundary with stable ABI
+* Deterministic numerical kernels and seeded RNGs
+* Multiple transport backends (MPI, ZeroMQ, etc)
+* Checkpointing and reproducible test harnesses
+* Unit and integration tests for both languages
 
 <details>
-<summary><b>▶ Click to expand directory details</b></summary>
+<summary><b>Why Fortran + C?</b></summary>
 
-| Directory | Content |
-| --- | --- |
-| `src/` | C runtime, scheduler, and networking logic. |
-| `fortran/` | Numerical kernels and scientific models. |
-| `include/` | Public C headers and the stable ABI definitions. |
-| `tests/` | Comprehensive unit and integration test suites. |
-| `examples/` | Reference experiments (e.g., N-Body, Fluid Dynamics). |
-| `tools/` | CLI utilities for monitoring worker clusters. |
+* Fortran for numerical reliability and long-term stability.
+* C for portable system code, scheduling and networking.
 
 </details>
 
 ---
 
-## 🛠️ Building & Requirements
+## Architecture at a glance
 
-The project uses **CMake** and requires a dual-compiler environment.
+```mermaid
+flowchart LR
+    Coord[Central Coordinator]
+    subgraph Network
+      Coord --> W1[Worker 1]
+      Coord --> W2[Worker 2]
+      Coord --> MW[Master Worker]
+      Coord --> WN[Worker N]
+    end
+    subgraph LocalCluster
+      MW --> S1[Sub 1]
+      MW --> S2[Sub 2]
+      MW --> S3[Sub 3]
+    end
+```
+
+For a full breakdown of directories, ABI and function contracts consult `DESIGN.md`.
+
+---
+
+## Build and run
 
 ### Prerequisites
 
-* **C Compiler:** GCC (C11) or Clang
-* **Fortran Compiler:** GFortran (2008+)
-* **Math Libs:** BLAS and LAPACK
-* **Optional:** OpenMPI / MPICH (required for Master/Sub-worker clusters)
+* C compiler: GCC or Clang (C11 or newer)
+* Fortran compiler: GFortran (Fortran 2008 or newer)
+* CMake
+* BLAS / LAPACK
+* Optional: OpenMPI or MPICH when using the MPI backend
 
-### Quick Start
+### Recommended local build
 
 ```bash
-mkdir build && cd build
-cmake .. -DENABLE_MPI=ON
-make -j$(nproc)
-
+mkdir -p build && cd build
+cmake .. -DENABLE_MPI=OFF -DCMAKE_BUILD_TYPE=Release
+cmake --build . -- -j4
 ```
 
-> [!TIP]
-> If you are running on a standalone machine, you can disable MPI during the CMake step to simplify dependencies: `cmake .. -DENABLE_MPI=OFF`.
+### Running examples
+
+See `examples/minimal_cluster/` for a minimal single-machine setup. The coordinator executable accepts `--config` pointing to YAML described in `examples/`.
 
 ---
 
-## 🤝 Contributing
+## Testing and CI
 
-We welcome contributions that expand the scientific reach of this platform.
+* Unit tests exist under `tests/` for both C and Fortran.
+* Integration tests cover mixed-language execution paths.
 
-### Current Priorities:
+Suggested CI steps (GitHub Actions):
 
-* [ ] Optimization of the C ABI for low-latency task handoff.
-* [ ] New Fortran kernels for Monte Carlo simulations.
-* [ ] Improved telemetry in the `Coordinator` dashboard.
-
-> [!NOTE]
-> Please review `docs/fortran_guidelines.md` before writing kernels. We enforce **Fixed-Point** or **Deterministic Floating Point** strategies to maintain reproducibility.
+* matrix build for compilers (GCC/Clang, GFortran)
+* run `cmake --build` and `ctest`
+* optional `docker` image build for reproducible test runs
 
 ---
 
-## ⚖️ Licence
+## Contributing
 
-Distributed under the **Apache V2 License**. See `LICENSE` for details.
+Please read `CONTRIBUTING.md` and `docs/fortran_guidelines.md` before submitting patches.
+
+* Use the stable C ABI in `include/fortran_api.h` when adding Fortran entry points
+* Keep Fortran pure: no networking, no process control
+* Keep C minimal: no numerical kernels in C
+
+If you add a public ABI change, provide a new symbol rather than changing an existing symbol. Backwards compatibility is a first-class goal.
+
+---
+
+## Roadmap & TODOs
+
+* [ ] Improve coordinator telemetry and dashboard
+* [ ] Add more Monte Carlo kernels in Fortran
+* [ ] Provide a GitHub Actions CI workflow and binary release pipeline
+
+---
+
+## Licence
+
+This project is licensed under the Apache License 2.0. See `LICENSE`.
+
+---
+
+## Where to read next
+
+* `DESIGN.md` — architecture, ABI contracts and detailed developer guidance.
+* `docs/` — coding guidelines and numerical reproducibility notes.
