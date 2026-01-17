@@ -26,8 +26,8 @@ graph TD
     MW --> S4[Sub 4]
     end
 
-    style Coord fill:#f96,stroke:#333,stroke-width:2px
-    style MW fill:#bbf,stroke:#333,stroke-width:2px
+    style Coord fill:#a32,stroke:#333,stroke-width:2px
+    style MW fill:#44a,stroke:#333,stroke-width:2px
 
 ```
 
