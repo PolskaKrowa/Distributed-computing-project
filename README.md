@@ -152,5 +152,4 @@ This project is licensed under the Apache License 2.0. See `LICENSE`.
 
 ## Where to read next
 
-* `DESIGN.md` — architecture, ABI contracts and detailed developer guidance.
 * `docs/` — coding guidelines and numerical reproducibility notes.
