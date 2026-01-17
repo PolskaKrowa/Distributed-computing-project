@@ -41,13 +41,14 @@
 
 /* Message types for transport layer */
 typedef enum {
-    MSG_TYPE_TASK_SUBMIT = 1,
-    MSG_TYPE_TASK_RESULT = 2,
-    MSG_TYPE_TASK_CANCEL = 3,
-    MSG_TYPE_WORKER_REGISTER = 4,
-    MSG_TYPE_WORKER_HEARTBEAT = 5,
-    MSG_TYPE_CHECKPOINT = 6,
-    MSG_TYPE_STATUS_QUERY = 7,
+    MSG_TYPE_HEARTBEAT       = 0x0001,  /* Worker heartbeat */
+    MSG_TYPE_TASK_SUBMIT     = 0x0010,  /* Coordinator -> Worker: task */
+    MSG_TYPE_TASK_RESULT     = 0x0011,  /* Worker -> Coordinator: result */
+    MSG_TYPE_TASK_CANCEL     = 0x0012,  /* Coordinator -> Worker: cancel */
+    MSG_TYPE_WORKER_REGISTER = 0x0020,  /* Worker -> Coordinator: join */
+    MSG_TYPE_WORKER_SHUTDOWN = 0x0021,  /* Worker -> Coordinator: leave */
+    MSG_TYPE_COORDINATOR_CMD = 0x0030,  /* Coordinator control commands */
+    MSG_TYPE_ERROR           = 0x00FF   /* Error message */
 } message_type_t;
 
 #endif /* PROJECT_H */

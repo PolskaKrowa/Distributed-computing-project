@@ -8,6 +8,7 @@
 
 #include "transport.h"
 #include "../common/log.h"
+#include "../../include/project.h"
 
 #include <stdlib.h>
 #include <string.h>

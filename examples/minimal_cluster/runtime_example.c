@@ -20,6 +20,7 @@
 #include "../../src/common/errors.h"
 #include "../../include/project.h"
 #include "../../include/task.h"
+#include "../common/time_utils.h"
 
 #include <stdio.h>
 #include <stdlib.h>

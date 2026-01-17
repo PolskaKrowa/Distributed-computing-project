@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "../../include/project.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -13,18 +14,6 @@ typedef enum {
     TRANSPORT_TYPE_MPI = 0,
     TRANSPORT_TYPE_ZMQ = 1
 } transport_type_t;
-
-/* Message types for distributed communication */
-typedef enum {
-    MSG_TYPE_HEARTBEAT       = 0x0001,  /* Worker heartbeat */
-    MSG_TYPE_TASK_SUBMIT     = 0x0010,  /* Coordinator -> Worker: task */
-    MSG_TYPE_TASK_RESULT     = 0x0011,  /* Worker -> Coordinator: result */
-    MSG_TYPE_TASK_CANCEL     = 0x0012,  /* Coordinator -> Worker: cancel */
-    MSG_TYPE_WORKER_REGISTER = 0x0020,  /* Worker -> Coordinator: join */
-    MSG_TYPE_WORKER_SHUTDOWN = 0x0021,  /* Worker -> Coordinator: leave */
-    MSG_TYPE_COORDINATOR_CMD = 0x0030,  /* Coordinator control commands */
-    MSG_TYPE_ERROR           = 0x00FF   /* Error message */
-} message_type_t;
 
 /* Message envelope header (fixed size) */
 typedef struct {

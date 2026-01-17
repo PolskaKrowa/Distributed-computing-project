@@ -18,6 +18,7 @@ add_executable(storage_example storage_example.c)
 target_link_libraries(storage_example PRIVATE
     common_lib
     storage_lib
+    m
 )
 
 target_include_directories(storage_example PRIVATE
