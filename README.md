@@ -1,121 +1,111 @@
-# Distributed Computing Project
+# 🛰️ Distributed Computing Project
 
-This project is a distributed computing platform designed to support **amateur and independent research** in physics, mathematics, and related scientific fields.
-
-It prioritises:
-- Numerical correctness
-- Reproducibility
-- Performance on commodity hardware
-- Clear separation between science code and systems code
-
-The codebase is written in **Fortran** and **C**, using each language where it is most appropriate.
+A high-performance distributed platform tailored for **amateur and independent research** in physics and mathematics. We bridge the gap between high-level scientific modeling and low-level systems engineering.
 
 ---
 
-## Project goals
+## 🎯 Project Core Pillars
 
-- Provide a reliable framework for running numerical experiments at scale
-- Make it easy for non-professional researchers to contribute scientific models
-- Support both small local clusters and loosely connected volunteer machines
-- Remain portable, inspectable, and long-lived
+> [!IMPORTANT]
+> This is **not** a general-purpose cloud framework. It is an **explicitly science-first** platform where numerical integrity outweighs architectural abstraction.
 
-This is not intended to be a general-purpose cloud framework. It is explicitly science-first.
-
----
-
-## Language split
-
-### Fortran
-Used for:
-- Numerical kernels
-- Mathematical algorithms
-- Physics and maths models
-- Scientific data output
-
-Fortran code should be deterministic, side-effect minimal, and free of networking or OS logic.
-
-### C
-Used for:
-- Distributed scheduling
-- Networking and messaging
-- Worker orchestration
-- Resource management
-- Metadata handling
-
-C code should not implement numerical algorithms beyond trivial bookkeeping.
+| Feature | Description |
+| --- | --- |
+| **Numerical Correctness** | Bit-for-bit reproducibility across different runs. |
+| **Commodity Hardware** | Optimized for consumer-grade CPUs and local clusters. |
+| **Separation of Concerns** | Strict boundary between science logic and systems logic. |
+| **Inspectability** | Code is written to be read and verified by researchers, not just machines. |
 
 ---
 
-## Repository structure
+## 🏗️ Architecture & Language Split
+
+We utilize a "Dual-Engine" approach, leveraging the specific strengths of Fortran and C through a stable C ABI.
+
+```mermaid
+graph TD
+    subgraph "C Systems Layer (Orchestration)"
+        A[Networking & MPI] --> B[Resource Manager]
+        B --> C[Worker Scheduler]
+    end
+
+    subgraph "Fortran Science Layer (Kernels)"
+        D[Physics Models]
+        E[Math Algorithms]
+        F[Deterministic Output]
+    end
+
+    C <--> |Stable C ABI| D
+    C <--> |Stable C ABI| E
 
 ```
 
-.
-├── src/        # C runtime, scheduler, networking
-├── fortran/    # Fortran numerical kernels and models
-├── include/    # Public C headers and stable ABI
-├── tests/      # Unit and integration tests
-├── examples/   # Example experiments and configurations
-├── tools/      # Command-line utilities and diagnostics
-├── docs/       # Design and contribution documentation
-├── cmake/      # CMake helper modules
-└── data/       # Sample inputs and reference outputs
+### 🧬 Responsibilities
+
+* **Fortran (The "Brain"):** Numerical kernels, math algorithms, and physics models. Minimal side effects.
+* **C (The "Body"):** Networking, messaging (MPI), worker orchestration, and metadata handling.
+
+---
+
+## 📂 Repository Structure
+
+<details>
+<summary><b>▶ Click to expand directory details</b></summary>
+
+| Directory | Content |
+| --- | --- |
+| `src/` | C runtime, scheduler, and networking logic. |
+| `fortran/` | Numerical kernels and scientific models. |
+| `include/` | Public C headers and the stable ABI definitions. |
+| `tests/` | Comprehensive unit and integration test suites. |
+| `examples/` | Reference experiments and sample configurations. |
+| `tools/` | CLI utilities for diagnostics and monitoring. |
+
+</details>
+
+---
+
+## 🛠️ Building the Project
+
+### Prerequisites
+
+* **Compilers:** GCC (C11) & GFortran (2008+)
+* **Libraries:** BLAS, LAPACK
+* **Optional:** MPI for multi-node distribution
+
+### Quick Start
+
+```bash
+# Clone and enter the directory
+git clone https://github.com/user/project-name.git && cd project-name
+
+# Standard build workflow
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make -j$(nproc)
 
 ```
 
-The only allowed boundary between languages is via a small, explicit C ABI.
+> [!TIP]
+> For performance-critical research, ensure you link against an optimized BLAS implementation like OpenBLAS or Intel MKL.
 
 ---
 
-## Building
+## 🤝 Contributing
 
-The project uses **CMake** and requires:
-- A C compiler
-- A Fortran compiler
-- BLAS and LAPACK
-- MPI (optional, depending on configuration)
+We welcome contributions from researchers and engineers alike.
 
-Basic build:
+### Current Priorities:
 
-```
+* [ ] Implementation of Runge-Kutta 4th Order kernels.
+* [ ] Improved documentation for the C-Fortran interface.
+* [ ] Validation cases for fluid dynamics models.
 
-mkdir build
-cd build
-cmake ..
-make
-
-```
-
-More detailed build instructions are in `docs/`.
+> [!NOTE]
+> Please review the `docs/fortran_guidelines.md` and `docs/c_guidelines.md` before submitting a Pull Request.
 
 ---
 
-## Contributing
+## ⚖️ Licence
 
-Contributions are welcome, especially:
-- New numerical kernels
-- Reference physics or mathematics models
-- Improvements to documentation
-- Tests and validation cases
-
-Please read:
-- `docs/fortran_guidelines.md` before contributing Fortran code
-- `docs/c_guidelines.md` before contributing C code
-
-Scientific contributions should include references and validation where possible.
-
----
-
-## Design principles
-
-- Fortran does maths, C does systems
-- Determinism over cleverness
-- Explicit interfaces over implicit behaviour
-- Correctness before performance
-- Readability over abstraction
-
----
-
-## Licence
-
-See the `LICENSE` file for details.
+Distributed under the **Apache V2 Licence**. See `LICENSE` for more information.
