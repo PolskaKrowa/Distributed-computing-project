@@ -70,12 +70,6 @@ void log_write(log_level_t level,
             file,
             line);
     
-    printf("[%s] %-5s %s:%d | ",
-            time_buf,
-            level_to_string(level),
-            file,
-            line);
-
     va_list args;
     va_start(args, fmt);
     vfprintf(log_file, fmt, args);
