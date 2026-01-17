@@ -8,8 +8,8 @@
 extern "C" {
 #endif
 
-#ifdef usleep()
-#undef usleep()
+#ifdef usleep
+#undef usleep
 #endif
 
 /*

@@ -20,14 +20,15 @@
 #include "../../src/common/errors.h"
 #include "../../include/project.h"
 #include "../../include/task.h"
+#include <unistd.h>
 #include "../common/time_utils.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <pthread.h>
 #include <time.h>
+
 
 /* Example 1: Basic task queue operations */
 static void example_task_queue_basic(void)

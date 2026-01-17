@@ -112,6 +112,27 @@ endif()
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 
+# ZeroMQ (required for distributed networking)
+find_package(ZMQ QUIET)
+if(NOT ZMQ_FOUND)
+    # Try pkg-config as fallback
+    find_package(PkgConfig)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(ZMQ libzmq)
+    endif()
+endif()
+
+if(ZMQ_FOUND)
+    message(STATUS "ZeroMQ found")
+    message(STATUS "  ZMQ_INCLUDE_DIRS: ${ZMQ_INCLUDE_DIRS}")
+    message(STATUS "  ZMQ_LIBRARIES: ${ZMQ_LIBRARIES}")
+else()
+    message(WARNING "ZeroMQ not found. Network transport will be limited to MPI only.")
+    message(WARNING "To install ZeroMQ: sudo apt install libzmq3-dev (Ubuntu/Debian)")
+    message(WARNING "                   sudo yum install zeromq-devel (RHEL/CentOS)")
+    message(WARNING "                   brew install zeromq (macOS)")
+endif()
+
 # =============================================================================
 # Optional Dependencies
 # =============================================================================
@@ -145,6 +166,12 @@ if(ENABLE_CUDA)
     enable_language(CUDA)
     find_package(CUDA REQUIRED)
     message(STATUS "CUDA enabled")
+endif()
+
+if(ZMQ_FOUND)
+    message(STATUS "  ZeroMQ: ENABLED")
+else()
+    message(STATUS "  ZeroMQ: DISABLED (not found)")
 endif()
 
 # =============================================================================
